@@ -938,55 +938,129 @@ function InsurancePage({ answers, onBack }) {
 }
 
 // ===== SMART WEALTH ALLOCATION (Step 2) =====
-// Builds a personalized plan from the user's assessment answers
+// Profile-driven engine: reads ALL assessment answers and predicts
+// the person's priorities + income allocation + insights.
 function buildPlan(a, A) {
-  // ---- PRIORITIES (dynamic waterfall) ----
-  const items = [];
-  const efOrder = A.efScore < 50 ? 10 : A.efScore < 70 ? 26 : 60;
-  items.push({ order: efOrder, label: A.efScore < 70 ? "Build Emergency Fund" : "Maintain Emergency Fund" });
+  const income = a.income || 0;
+  const deps = a.dependents || 0;
+  const dt = a.debtTypes || [];
+  const variableIncome = a.incomeType && a.incomeType !== "Fixed Income";
+  const growthMinded = ["Wealth Growth", "Passive Income", "Financial Freedom"].includes(a.wealthPref);
 
-  const goalsSorted = a.goals
+  const goalObjs = (a.goals || [])
     .map((gid) => ({ g: GOALS.find((x) => x.id === gid), d: a.goalDetails[gid] || {} }))
-    .filter((x) => x.g)
-    .sort((x, y) => (x.d.years || 99) - (y.d.years || 99));
-  goalsSorted.forEach((go, i) => {
-    items.push({ order: 20 + i, label: `Save for ${go.g.label} Fund` });
+    .filter((x) => x.g);
+  const goalsByHorizon = [...goalObjs].sort((x, y) => (x.d.years || 99) - (y.d.years || 99));
+
+  // ---------- URGENCY-RANKED PRIORITIES ----------
+  const cand = [];
+
+  // Emergency Fund
+  let efU = 100 - A.efScore;
+  if (variableIncome) efU += 10;
+  if (deps > 0) efU += 5;
+  cand.push({ label: A.efScore < 70 ? "Build Emergency Fund" : "Maintain Emergency Fund", urgency: efU });
+
+  // Debt payoff (only if in debt)
+  if (a.hasDebt) {
+    let dU = A.dti >= 40 ? 92 : A.dti >= 20 ? 68 : 46;
+    const highInterest = dt.includes("Credit Card");
+    if (highInterest) dU += 15;
+    cand.push({ label: highInterest ? "Pay Down High-Interest Debt" : "Reduce Debt Burden", urgency: dU });
+  }
+
+  // Goals (each, urgency from horizon + priority flag)
+  goalObjs.forEach((go) => {
+    const yrs = go.d.years || 99;
+    let gU = yrs < 1 ? 84 : yrs <= 3 ? 68 : yrs <= 5 ? 54 : 40;
+    if (go.d.priority === "High") gU += 10;
+    else if (go.d.priority === "Low") gU -= 8;
+    cand.push({ label: `Save for ${go.g.label} Fund`, urgency: gU, yrs });
   });
 
-  items.push({ order: 30, label: "Grow Investment Portfolio" });
-  items.push({ order: A.insScore < 40 ? 38 : 42, label: "Build Financial Protection" });
-  items.push({ order: A.taxable ? 34 : 50, label: A.taxable ? "Optimize Tax Planning" : "Start Tax Planning" });
+  // Investment (dampened if foundation weak)
+  let invU = A.invScore < 50 ? 56 : 46;
+  if (A.efScore < 50) invU -= 18;
+  if (a.risk === "aggressive") invU += 12;
+  else if (a.risk === "moderate") invU += 6;
+  if (growthMinded) invU += 8;
+  cand.push({ label: "Grow Investment Portfolio", urgency: invU });
 
-  const priorities = items.sort((x, y) => x.order - y.order);
+  // Insurance / Protection
+  let insU = 80 - A.insScore;
+  if (deps > 0) insU += 15;
+  if (a.maritalStatus === "Married") insU += 5;
+  if (a.hasDebt && dt.includes("Home Loan") && !a.insurance.includes("Life Insurance")) insU += 15;
+  cand.push({ label: "Build Financial Protection", urgency: insU });
 
-  // ---- ALLOCATION (% of monthly income) ----
-  const alloc = { daily: 37, emergency: 17, goals: 22, investment: 12, insurance: 7, tax: 2 };
-  if (A.efScore < 40) alloc.emergency = 20;
-  else if (A.efScore >= 70) alloc.emergency = 12;
-  if (a.goals.length >= 3) alloc.goals = 25;
-  else if (a.goals.length === 1) alloc.goals = 18;
-  else if (a.goals.length === 0) alloc.goals = 8;
-  if (a.risk === "aggressive") alloc.investment = 16;
-  else if (a.risk === "conservative") alloc.investment = 10;
-  alloc.insurance = A.insScore < 40 ? 9 : 5;
-  alloc.tax = A.taxable ? 6 : 2;
-  const others = alloc.emergency + alloc.goals + alloc.investment + alloc.insurance + alloc.tax;
-  alloc.daily = 100 - others;
+  // Tax
+  let taxU = A.annual > 750000 ? 66 : A.annual > 310000 ? 52 : 24;
+  cand.push({ label: A.taxable ? "Optimize Tax Planning" : "Start Tax Planning", urgency: taxU });
 
-  // ---- INSIGHTS ----
+  const priorities = cand
+    .sort((x, y) => y.urgency - x.urgency || (x.yrs || 0) - (y.yrs || 0))
+    .map((p) => ({ label: p.label, band: p.urgency >= 70 ? T.bad : p.urgency >= 45 ? T.warn : T.good }));
+
+  // ---------- ALLOCATION (% of monthly income) ----------
+  let emergency = A.efScore < 30 ? 22 : A.efScore < 60 ? 17 : A.efScore < 80 ? 12 : 6;
+  if (variableIncome) emergency += 3;
+
+  // Goals — derived from ACTUAL required monthly saving across their goals
+  let goalNeed = 0;
+  goalObjs.forEach((go) => { if (go.d.amount && go.d.years) goalNeed += go.d.amount / (go.d.years * 12); });
+  let goals = 0;
+  if (goalObjs.length > 0) {
+    goals = income > 0 ? Math.min(28, (goalNeed / income) * 100) : 18;
+    goals = Math.max(8, goals);
+  }
+
+  let investment = a.risk === "aggressive" ? 16 : a.risk === "conservative" ? 8 : 12;
+  if (A.efScore < 50) investment = investment * 0.6;
+  if (growthMinded) investment += 3;
+
+  let insurance = A.insScore < 40 ? 9 : A.insScore < 70 ? 6 : 4;
+  if (deps > 0) insurance += 2;
+  if (a.hasDebt && dt.includes("Home Loan") && !a.insurance.includes("Life Insurance")) insurance += 2;
+
+  let tax = A.annual > 750000 ? 8 : A.taxable ? 6 : 2;
+
+  // Debt-service pressure pulls from discretionary buckets
+  if (a.hasDebt && A.dti >= 30) {
+    investment = Math.max(4, investment - 4);
+    goals = goalObjs.length ? Math.max(6, goals - 3) : 0;
+  }
+
+  emergency = Math.round(emergency);
+  goals = Math.round(goals);
+  investment = Math.round(investment);
+  insurance = Math.round(insurance);
+  tax = Math.round(tax);
+
+  let others = emergency + goals + investment + insurance + tax;
+  let daily = 100 - others;
+  if (daily < 30) {
+    let over = 30 - daily;
+    const trimG = Math.min(goals, over); goals -= trimG; over -= trimG;
+    investment = Math.max(0, investment - over);
+    daily = 30;
+  }
+  const alloc = { daily, emergency, goals, investment, insurance, tax };
+
+  // ---------- INSIGHTS ----------
   const insights = [];
   if (A.efScore < 60) insights.push("ยังไม่มี Financial Foundation จาก Emergency Fund");
-  else insights.push("มี Emergency Fund เป็น Financial Foundation ที่ดีแล้ว");
-  if (a.goals.length >= 2) insights.push("มี Financial Goals หลายเป้าหมายที่ต้องบริหารพร้อมกัน");
-  else if (a.goals.length === 1) insights.push("มี Financial Goal ที่ชัดเจน 1 เป้าหมาย");
-  if (goalsSorted.length >= 2) {
-    insights.push(`${goalsSorted[0].g.label} เป็น Goal ที่มี Time Horizon สั้นกว่า ${goalsSorted[goalsSorted.length - 1].g.label}`);
-  }
+  else insights.push("มี Emergency Fund เป็น Financial Foundation ที่มั่นคงแล้ว");
+  if (a.hasDebt && A.dti >= 30) insights.push(`ภาระหนี้ค่อนข้างสูง (DTI ${A.dti.toFixed(0)}%) ควรเร่งลดหนี้ก่อนขยายการลงทุน`);
+  if (goalObjs.length >= 2) insights.push("มี Financial Goals หลายเป้าหมายที่ต้องบริหารพร้อมกัน");
+  else if (goalObjs.length === 1) insights.push("มี Financial Goal ที่ชัดเจน 1 เป้าหมาย");
+  if (goalsByHorizon.length >= 2) insights.push(`${goalsByHorizon[0].g.label} เป็น Goal ที่มี Time Horizon สั้นกว่า ${goalsByHorizon[goalsByHorizon.length - 1].g.label}`);
   const riskLabel = a.risk === "aggressive" ? "High" : a.risk === "conservative" ? "Conservative" : "Moderate";
   insights.push(`สามารถเริ่มสร้าง Wealth ผ่านการลงทุนได้ในระดับ ${riskLabel} Risk`);
+  if (deps > 0) insights.push(`มีผู้พึ่งพา ${deps} คน — Financial Protection สำคัญกว่าคนทั่วไป`);
   if (A.insScore < 50) insights.push("ยังขาด Financial Protection ที่เพียงพอ");
-  if (A.taxable) insights.push("รายได้ถึงเกณฑ์เสียภาษี ควรเริ่มวางแผนภาษีอย่างจริงจัง");
-  else insights.push("Tax Planning ยังไม่ใช่ Financial Priority ในปัจจุบัน แต่จะมีความสำคัญมากขึ้นเมื่อรายได้เติบโตในอนาคต");
+  else insights.push("มี Financial Protection ในระดับที่เหมาะสม");
+  if (A.taxable) insights.push("รายได้ถึงเกณฑ์เสียภาษี ควรวางแผนลดหย่อนอย่างจริงจัง");
+  else insights.push("Tax Planning ยังไม่ใช่ Financial Priority ในปัจจุบัน แต่จะสำคัญมากขึ้นเมื่อรายได้เติบโต");
 
   return { priorities, alloc, insights };
 }
@@ -1010,7 +1084,7 @@ function WealthAllocationPage({ answers, onNext, onBack }) {
       <Header title="Smart Wealth Allocation" sub="เปลี่ยน Financial Profile เป็นแผนการเงินเฉพาะคุณ" onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ fontSize: 13, color: T.sub, background: "#F0F8FF", padding: 10, borderRadius: 10 }}>
-          🧭 ระบบวิเคราะห์จากคำตอบของคุณ แล้วจัดลำดับความสำคัญ + สัดส่วนการเงินให้อัตโนมัติ
+          🧭 วิเคราะห์จากคำตอบของคุณ ({A.occ.label} · {fmt(answers.income)} บาท/เดือน) แล้วจัดลำดับความสำคัญ + สัดส่วนการเงินให้อัตโนมัติ
         </div>
 
         <Card style={{ padding: 0, overflow: "hidden" }}>
@@ -1019,8 +1093,9 @@ function WealthAllocationPage({ answers, onNext, onBack }) {
           </div>
           <div style={{ padding: "6px 16px 14px" }}>
             {priorities.map((p, i) => (
-              <div key={i} style={{ display: "flex", gap: 12, alignItems: "center", padding: "11px 0", borderBottom: i < priorities.length - 1 ? `1px solid ${T.line}` : "none" }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: "#8C7B6E", minWidth: 22 }}>{String(i + 1).padStart(2, "0")}</span>
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "11px 0", borderBottom: i < priorities.length - 1 ? `1px solid ${T.line}` : "none" }}>
+                <span style={{ width: 8, height: 8, borderRadius: 4, background: p.band, flexShrink: 0 }} />
+                <span style={{ fontSize: 13, fontWeight: 800, color: "#8C7B6E", minWidth: 20 }}>{String(i + 1).padStart(2, "0")}</span>
                 <span style={{ fontSize: 14, color: T.ink, fontWeight: 600 }}>{p.label}</span>
               </div>
             ))}
@@ -1031,11 +1106,15 @@ function WealthAllocationPage({ answers, onNext, onBack }) {
           <div style={{ background: `linear-gradient(135deg, ${T.blue}, ${T.blueDark})`, color: "#fff", padding: "12px 16px", fontWeight: 700, fontSize: 15 }}>
             Recommended Allocation
           </div>
+          <div style={{ padding: "8px 16px 0", fontSize: 12, color: T.sub }}>สัดส่วนของรายได้ต่อเดือน</div>
           <div style={{ padding: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {allocCards.map((c) => (
               <div key={c.key} style={{ background: "#EAF3FB", borderRadius: 12, padding: "14px 10px", textAlign: "center" }}>
                 <div style={{ fontSize: 12, color: T.sub, minHeight: 32, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1.3 }}>{c.label}</div>
                 <div style={{ fontSize: 19, fontWeight: 800, color: T.navy, marginTop: 4 }}>{range(c.v)}</div>
+                {answers.income > 0 && (
+                  <div style={{ fontSize: 11, color: T.blueDark, marginTop: 2 }}>≈ {fmt(answers.income * c.v / 100)} ฿</div>
+                )}
               </div>
             ))}
           </div>
