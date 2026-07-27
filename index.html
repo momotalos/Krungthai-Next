@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Krungthai 6 Financial Pillars</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState } = React;
+
+// ===== PASSWORD PROTECTION =====
+function PasswordGate({ onUnlock }) {
+  const [pwd, setPwd] = useState("");
+  const correctPwd = "krungthai2024"; // เปลี่ยนเป็นรหัสผ่านที่ต้องการ
+  
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "linear-gradient(135deg, #00A6E6, #0077B3)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999,
+    }}>
+      <div style={{
+        background: "white", borderRadius: 20, padding: 40, boxShadow: "0 20px 60px rgba(0,0,0,.2)",
+        maxWidth: 400, width: "90%", textAlign: "center",
+      }}>
+        <h2 style={{ fontSize: 28, fontWeight: 800, color: "#0B2A4A", marginBottom: 10 }}>🔐 Access Required</h2>
+        <p style={{ fontSize: 14, color: "#6B8299", marginBottom: 24 }}>Enter password to view 6 Financial Pillars</p>
+        
+        <input 
+          type="password"
+          value={pwd}
+          onChange={(e) => setPwd(e.target.value)}
+          onKeyPress={(e) => e.key === "Enter" && pwd === correctPwd && onUnlock()}
+          placeholder="Enter password"
+          style={{
+            width: "100%", padding: "12px", fontSize: 16, borderRadius: 10,
+            border: "1.5px solid #DCEAF3", marginBottom: 16, fontFamily: "inherit",
+            boxSizing: "border-box",
+          }}
+        />
+        
+        <button 
+          onClick={() => pwd === correctPwd && onUnlock()}
+          disabled={pwd !== correctPwd}
+          style={{
+            width: "100%", padding: "12px", fontSize: 16, fontWeight: 700,
+            background: pwd === correctPwd ? "#00A6E6" : "#DCEAF3",
+            color: pwd === correctPwd ? "white" : "#6B8299",
+            border: "none", borderRadius: 10, cursor: pwd === correctPwd ? "pointer" : "not-allowed",
+            fontFamily: "inherit",
+          }}
+        >
+          Unlock
+        </button>
+        
+        {pwd && pwd !== correctPwd && (
+          <p style={{ marginTop: 12, fontSize: 12, color: "#E5484D" }}>❌ Password incorrect</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const T = {
+  blue: "#00A6E6", blueDark: "#0077B3", navy: "#0B2A4A",
+  bg: "#EEF6FB", card: "#FFFFFF", ink: "#16324A", sub: "#6B8299",
+  line: "#DCEAF3", good: "#1DB954", warn: "#F5A623", bad: "#E5484D",
+};
+const fmt = (n) => (isNaN(n) || n === null ? "0" : Math.round(n).toLocaleString("th-TH"));
+
+// ===== CONSTANTS =====
+const OCCUPATIONS = [
+  { id: "student", label: "Student", months: 3 },
+  { id: "firstjob", label: "First Jobber", months: 6 },
+  { id: "fulltime", label: "Full-time Employee", months: 6 },
+  { id: "freelance", label: "Freelancer", months: 9 },
+  { id: "biz", label: "Business Owner", months: 12 },
+  { id: "other", label: "Others", months: 6 },
+];
+const INCOME_TYPES = ["Fixed Income", "Variable Income", "Both"];
+const EF_STATUS = [
+  { id: "none", label: "ไม่มี", months: 0 },
+  { id: "lt3", label: "มี แต่ยังไม่ครบ 3 เดือนของค่าใช้จ่าย", months: 1.5 },
+  { id: "m36", label: "มี 3–6 เดือนของค่าใช้จ่าย", months: 4.5 },
+  { id: "gt6", label: "มีมากกว่า 6 เดือนของค่าใช้จ่าย", months: 7.5 },
+];
+const INVEST_STATUS = [
+  { id: "never", label: "ไม่เคยลงทุน" },
+  { id: "some", label: "เคยลงทุน" },
+  { id: "regular", label: "ลงทุนอย่างสม่ำเสมอ" },
+];
+const INVEST_FREQ = ["Monthly DCA", "Quarterly", "Annually", "Ad-hoc"];
+const INDUSTRIES = ["FinTech / Digital Banking", "Healthcare / Biotech", "Technology / IT / Software", "Energy / Sustainability", "Real Estate / Property", "Manufacturing", "Retail / Consumer Goods", "Agriculture / Food", "Automotive", "Telecommunications", "Others"];
+const INVEST_TYPES = ["Mutual Funds", "Stocks", "Bonds", "ETF", "Crypto", "Others"];
+const STOCK_SECTORS_TH = ["Thai Blue Chip", "Technology", "Healthcare", "Banking", "Energy", "Consumer", "Real Estate", "Others"];
+const STOCK_SECTORS_INT = ["Technology", "Healthcare", "Finance", "Consumer", "Energy", "Others"];
+const INSURANCE_TYPES = ["ไม่มี", "Health Insurance", "Life Insurance", "Accident Insurance", "Others"];
+const DEBT_TYPES = ["Student Loan", "Credit Card", "Personal Loan", "Car Loan", "Home Loan", "Others"];
+const GOALS = [
+  { id: "travel", label: "Travel", icon: "✈️" },
+  { id: "mba", label: "MBA / Education", icon: "🎓" },
+  { id: "home", label: "Home", icon: "🏡" },
+  { id: "wedding", label: "Wedding", icon: "💍" },
+  { id: "retire", label: "Retirement", icon: "🌅" },
+  { id: "freedom", label: "Financial Freedom", icon: "🕊️" },
+  { id: "othergoal", label: "Others", icon: "⭐" },
+];
+const RISK = [
+  { id: "conservative", label: "Conservative", desc: "เน้นรักษาเงินต้น รับความผันผวนได้น้อย" },
+  { id: "moderate", label: "Moderate", desc: "รับความผันผวนได้ปานกลาง เพื่อผลตอบแทนที่ดีขึ้น" },
+  { id: "aggressive", label: "Aggressive", desc: "รับความผันผวนได้สูง เพื่อการเติบโตระยะยาว" },
+];
+const WEALTH_PREF = ["Financial Stability", "Wealth Growth", "Goal Achievement", "Passive Income", "Financial Freedom"];
+const LIFESTYLE = ["Necessities", "Lifestyle", "Experiences", "Travel", "Shopping", "Investment", "Others"];
+
+// ===== UI COMPONENTS =====
+function Card({ children, style, onClick }) {
+  return (
+    <div onClick={onClick} style={{
+      background: T.card, borderRadius: 16, padding: 16,
+      border: `1px solid ${T.line}`, boxShadow: "0 1px 4px rgba(11,42,74,.05)",
+      cursor: onClick ? "pointer" : "default", ...style,
+    }}>{children}</div>
+  );
+}
+
+function Chip({ active, onClick, children }) {
+  return (
+    <button onClick={onClick} style={{
+      padding: "9px 15px", borderRadius: 20, fontSize: 14, cursor: "pointer",
+      fontFamily: "inherit", transition: "all .15s",
+      border: `1.5px solid ${active ? T.blue : T.line}`,
+      background: active ? T.blue : "#fff",
+      color: active ? "#fff" : T.ink, fontWeight: active ? 700 : 400,
+    }}>{children}</button>
+  );
+}
+
+function OptionRow({ active, onClick, children }) {
+  return (
+    <button onClick={onClick} style={{
+      display: "block", width: "100%", textAlign: "left", padding: "12px 14px",
+      borderRadius: 12, fontSize: 14, cursor: "pointer", fontFamily: "inherit",
+      marginBottom: 8, transition: "all .15s",
+      border: `1.5px solid ${active ? T.blue : T.line}`,
+      background: active ? "#E9F7FE" : "#fff",
+      color: T.ink, fontWeight: active ? 700 : 400,
+    }}>{active ? "●" : "○"} {children}</button>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 13, color: T.sub, marginBottom: 6 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: "100%", boxSizing: "border-box", padding: "10px 12px",
+  borderRadius: 10, border: `1.5px solid ${T.line}`, fontSize: 15,
+  color: T.ink, outline: "none", fontFamily: "inherit", background: "#fff",
+};
+
+function Ring({ score, size = 64, stroke = 7 }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const col = score >= 70 ? T.good : score >= 45 ? T.warn : T.bad;
+  return (
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={T.line} strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={col} strokeWidth={stroke}
+        strokeLinecap="round" strokeDasharray={`${(score / 100) * c} ${c}`}
+        style={{ transition: "stroke-dasharray .6s ease" }} />
+    </svg>
+  );
+}
+
+function Header({ title, sub, onBack, children }) {
+  return (
+    <div style={{
+      background: `linear-gradient(135deg, ${T.blue}, ${T.blueDark})`,
+      padding: "20px 20px 26px", color: "#fff", borderRadius: "0 0 24px 24px",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {onBack && (
+          <button onClick={onBack} style={{
+            background: "rgba(255,255,255,.18)", color: "#fff", border: "none",
+            borderRadius: 10, padding: "6px 12px", fontSize: 14, cursor: "pointer", fontFamily: "inherit",
+          }}>← กลับ</button>
+        )}
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>{title}</div>
+          {sub && <div style={{ fontSize: 13, opacity: 0.85 }}>{sub}</div>}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ===== ANALYSIS FUNCTION =====
+function analyze(a) {
+  const occ = OCCUPATIONS.find((o) => o.id === a.occupation) || OCCUPATIONS[2];
+  let efMonthsNeeded = occ.months;
+  if (a.incomeType !== "Fixed Income") efMonthsNeeded = Math.min(12, efMonthsNeeded + 3);
+  const efHave = EF_STATUS.find((s) => s.id === a.efStatus)?.months ?? 0;
+  const efScore = Math.min(95, Math.round((efHave / efMonthsNeeded) * 100));
+
+  const invBase = a.investStatus === "regular" ? 75 : a.investStatus === "some" ? 50 : 25;
+  const invScore = Math.min(90, invBase + (a.investTypes.length >= 2 ? 10 : 0));
+
+  const insCount = a.insurance.filter((i) => i !== "ไม่มี" && i !== "Others").length;
+  let insScore = a.insurance.includes("ไม่มี") || insCount === 0 ? 20 : 30 + insCount * 20;
+  if (a.hasDebt && a.debtTypes.includes("Home Loan") && !a.insurance.includes("Life Insurance"))
+    insScore = Math.min(insScore, 55);
+  insScore = Math.min(90, insScore);
+
+  const dti = a.hasDebt && a.income > 0 ? (a.debtPayment / a.income) * 100 : 0;
+  const spendScore = !a.hasDebt ? 78 : dti < 20 ? 68 : dti < 40 ? 48 : 28;
+
+  const annual = a.income * 12;
+  const taxable = annual > 310000;
+  const taxScore = !taxable ? 75 : 55;
+
+  const goalsScore = a.goals.length === 0 ? 30 : Math.min(85, 45 + a.goals.length * 10);
+
+  const expense = a.expense || Math.round(a.income * 0.65);
+  const overall = Math.round((efScore + invScore + insScore + spendScore + taxScore + goalsScore) / 6);
+  return { occ, efMonthsNeeded, efHave, efScore, invScore, insScore, spendScore, taxScore, goalsScore, dti, taxable, annual, expense, overall };
+}
+
+// ===== FEATURE PAGE =====
+function FeaturePage({ onStart }) {
+  return (
+    <div>
+      <div className="feature-header">
+        <h1>6 Financial Pillars</h1>
+        <p>วางแผนการเงิน บริหารหนี้ และพัฒนาความมั่นคงทางการเงิน</p>
+        <div className="feature-badge">✨ ฟีเจอร์ใหม่ใน Krungthai Next</div>
+      </div>
+
+      <div className="feature-section">
+        <div className="feature-container">
+          <h2>6 เสาหลักของความมั่นคงทางการเงิน</h2>
+          <p>ระบบวิเคราะห์ที่ครบครันให้คำแนะนำเฉพาะบุคคล</p>
+          
+          <div className="pillars-grid">
+            <div className="pillar-card">
+              <div className="pillar-icon">🛟</div>
+              <h3>Emergency Fund</h3>
+              <p>วิเคราะห์เงินสำรองตามอาชีพ รายได้ • Auto-Saving</p>
+            </div>
+            <div className="pillar-card">
+              <div className="pillar-icon">🧾</div>
+              <h3>Tax Planning</h3>
+              <p>Itemized Deduction • ผลิตภัณฑ์แนะนำ • KTX</p>
+            </div>
+            <div className="pillar-card">
+              <div className="pillar-icon">💳</div>
+              <h3>Daily Spending</h3>
+              <p>DTI • 50/30/20 Budget • Financial Discipline</p>
+            </div>
+            <div className="pillar-card">
+              <div className="pillar-icon">🎯</div>
+              <h3>Saving Goals</h3>
+              <p>Priority by timeline • ออมเดือนละเท่าไหร่</p>
+            </div>
+            <div className="pillar-card">
+              <div className="pillar-icon">📈</div>
+              <h3>Investment</h3>
+              <p>News Feed • AI Assistant • KTX</p>
+            </div>
+            <div className="pillar-card">
+              <div className="pillar-icon">🛡️</div>
+              <h3>Insurance</h3>
+              <p>Gap Analysis • ความคุ้มครอง • Priority</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="feature-section" style={{ textAlign: 'center' }}>
+        <div className="feature-container">
+          <div className="cta-section">
+            <h2>เริ่มวางแผนการเงิน</h2>
+            <p>ตอบคำถาม 6 ส่วน ได้รับคำแนะนำเฉพาะคุณ</p>
+            <button className="btn-start" onClick={onStart}>เปิดใช้ 6 Financial Pillars →</button>
+          </div>
+        </div>
+      </div>
+
+      <footer className="feature-footer">
+        <p>© 2024 Krungthai Bank • 6 Financial Pillars</p>
+      </footer>
+    </div>
+  );
+}
+
+// ===== ONBOARDING (FULL) =====
+function Onboarding({ answers, setAnswers, onDone }) {
+  const [step, setStep] = useState(0);
+  const a = answers;
+  const set = (patch) => setAnswers({ ...a, ...patch });
+  const toggle = (key, val, noneVal) => {
+    let arr = a[key].includes(val) ? a[key].filter((x) => x !== val) : [...a[key], val];
+    if (noneVal) {
+      if (val === noneVal) arr = arr.includes(noneVal) ? [noneVal] : [];
+      else arr = arr.filter((x) => x !== noneVal);
+    }
+    set({ [key]: arr });
+  };
+  const sections = ["BASIC INFO", "TAX & PERSONAL", "CURRENT FINANCIAL", "DEBT MANAGEMENT", "FINANCIAL GOALS", "PREFERENCES"];
+  const canNext = [
+    a.occupation && a.income > 0 && a.incomeType,
+    a.maritalStatus,
+    a.efStatus && a.investStatus && a.insurance.length > 0,
+    a.hasDebt !== null && (!a.hasDebt || (a.debtTypes.length > 0 && a.debtPayment >= 0)),
+    true,
+    a.risk && a.wealthPref && a.lifestyle.length > 0,
+  ][step];
+  const dti = a.hasDebt && a.income > 0 ? ((a.debtPayment / a.income) * 100).toFixed(1) : null;
+
+  return (
+    <div className="app-container">
+      <Header title="มารู้จักคุณกันก่อน" sub="ตอบคำถาม 6 ส่วน">
+        <div style={{ display: "flex", gap: 6, marginTop: 16 }}>
+          {sections.map((_, i) => (
+            <div key={i} style={{
+              flex: 1, height: 5, borderRadius: 3,
+              background: i <= step ? "#fff" : "rgba(255,255,255,.3)",
+            }} />
+          ))}
+        </div>
+        <div style={{ fontSize: 12, opacity: 0.85, marginTop: 8 }}>
+          SECTION {step + 1} / 6 · {sections[step]}
+        </div>
+      </Header>
+
+      <div style={{ padding: 20 }}>
+        {step === 0 && (
+          <Card>
+            <div style={{ fontSize: 13, color: T.sub, marginBottom: 12, background: "#F0F8FF", padding: 10, borderRadius: 10 }}>
+              💡 ข้อมูลพื้นฐาน ที่ระบบใช้เทียบกับโปรไฟล์บัญชี
+            </div>
+            <Field label="อาชีพ">
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {OCCUPATIONS.map((o) => (
+                  <Chip key={o.id} active={a.occupation === o.id} onClick={() => set({ occupation: o.id })}>{o.label}</Chip>
+                ))}
+              </div>
+            </Field>
+            <Field label="รายได้ต่อเดือน (บาท)">
+              <input style={inputStyle} type="number" value={a.income || ""} placeholder="30000"
+                onChange={(e) => set({ income: +e.target.value || 0 })} />
+            </Field>
+            <Field label="ประเภทรายได้">
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {INCOME_TYPES.map((t) => (
+                  <Chip key={t} active={a.incomeType === t} onClick={() => set({ incomeType: t })}>{t}</Chip>
+                ))}
+              </div>
+            </Field>
+          </Card>
+        )}
+
+        {step === 1 && (
+          <Card>
+            <div style={{ fontSize: 13, color: T.sub, marginBottom: 12, background: "#F0F8FF", padding: 10, borderRadius: 10 }}>
+              💡 ข้อมูลสำหรับคำนวณลดหย่อนภาษี
+            </div>
+            <Field label="สถานภาพทางการเงิน">
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {["Single", "Married", "Divorced", "Widowed", "Head of Household"].map((m) => (
+                  <Chip key={m} active={a.maritalStatus === m} onClick={() => set({ maritalStatus: m })}>{m}</Chip>
+                ))}
+              </div>
+            </Field>
+            <Field label="จำนวนผู้พึ่งพา (คน)">
+              <input style={inputStyle} type="number" value={a.dependents || ""} placeholder="0"
+                onChange={(e) => set({ dependents: +e.target.value || 0 })} />
+            </Field>
+            <Field label="SSF/RMF ปีนี้ (บาท)">
+              <input style={inputStyle} type="number" value={a.ssfRmfAmount || ""} placeholder="0"
+                onChange={(e) => set({ ssfRmfAmount: +e.target.value || 0 })} />
+            </Field>
+            <Field label="Life Insurance Premium (บาท)">
+              <input style={inputStyle} type="number" value={a.lifeInsurancePremium || ""} placeholder="0"
+                onChange={(e) => set({ lifeInsurancePremium: +e.target.value || 0 })} />
+            </Field>
+            <Field label="Charitable Donation (บาท)">
+              <input style={inputStyle} type="number" value={a.charitableDonation || ""} placeholder="0"
+                onChange={(e) => set({ charitableDonation: +e.target.value || 0 })} />
+            </Field>
+          </Card>
+        )}
+
+        {step === 2 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Card>
+              <Field label="Savings (บาท)">
+                <input style={inputStyle} type="number" value={a.savings || ""} placeholder="50000"
+                  onChange={(e) => set({ savings: +e.target.value || 0 })} />
+              </Field>
+            </Card>
+            <Card>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 10 }}>🛟 Emergency Fund Status</div>
+              {EF_STATUS.map((s) => (
+                <OptionRow key={s.id} active={a.efStatus === s.id} onClick={() => set({ efStatus: s.id })}>{s.label}</OptionRow>
+              ))}
+            </Card>
+            <Card>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 10 }}>📈 Investment Status</div>
+              {INVEST_STATUS.map((s) => (
+                <OptionRow key={s.id} active={a.investStatus === s.id} onClick={() => set({ investStatus: s.id })}>{s.label}</OptionRow>
+              ))}
+              {a.investStatus && a.investStatus !== "never" && (
+                <div>
+                  <Field label="Investment Frequency">
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {INVEST_FREQ.map((f) => (
+                        <Chip key={f} active={a.investFreq === f} onClick={() => set({ investFreq: f })}>{f}</Chip>
+                      ))}
+                    </div>
+                  </Field>
+                  <Field label="Industries (เลือกได้หลายข้อ)">
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {INDUSTRIES.map((ind) => (
+                        <Chip key={ind} active={a.industries.includes(ind)} onClick={() => toggle("industries", ind)}>{ind}</Chip>
+                      ))}
+                    </div>
+                  </Field>
+                  <Field label="Investment Types">
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {INVEST_TYPES.map((t) => (
+                        <Chip key={t} active={a.investTypes.includes(t)} onClick={() => toggle("investTypes", t)}>{t}</Chip>
+                      ))}
+                    </div>
+                  </Field>
+                  {a.investTypes.includes("Stocks") && (
+                    <div>
+                      <Field label="Stock Sectors (Thai)">
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          {STOCK_SECTORS_TH.map((s) => (
+                            <Chip key={s} active={a.stockSectorsTH.includes(s)} onClick={() => toggle("stockSectorsTH", s)}>{s}</Chip>
+                          ))}
+                        </div>
+                      </Field>
+                      <Field label="Stock Sectors (Int'l)">
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          {STOCK_SECTORS_INT.map((s) => (
+                            <Chip key={s} active={a.stockSectorsINT.includes(s)} onClick={() => toggle("stockSectorsINT", s)}>{s}</Chip>
+                          ))}
+                        </div>
+                      </Field>
+                    </div>
+                  )}
+                  {a.investTypes.includes("Bonds") && (
+                    <Field label="Bond Types">
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {["Government", "Corporate"].map((b) => (
+                          <Chip key={b} active={a.bondTypes.includes(b)} onClick={() => toggle("bondTypes", b)}>{b}</Chip>
+                        ))}
+                      </div>
+                    </Field>
+                  )}
+                </div>
+              )}
+            </Card>
+            <Card>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 10 }}>🛡️ Insurance</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {INSURANCE_TYPES.map((t) => (
+                  <Chip key={t} active={a.insurance.includes(t)} onClick={() => toggle("insurance", t, "ไม่มี")}>{t}</Chip>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {step === 3 && (
+          <Card>
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 10 }}>💳 Debt</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              <Chip active={a.hasDebt === false} onClick={() => set({ hasDebt: false, debtTypes: [], debtBalance: 0, debtPayment: 0 })}>No</Chip>
+              <Chip active={a.hasDebt === true} onClick={() => set({ hasDebt: true })}>Yes</Chip>
+            </div>
+            {a.hasDebt && (
+              <div>
+                <Field label="Debt Types">
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {DEBT_TYPES.map((t) => (
+                      <Chip key={t} active={a.debtTypes.includes(t)} onClick={() => toggle("debtTypes", t)}>{t}</Chip>
+                    ))}
+                  </div>
+                </Field>
+                <Field label="Outstanding Balance (บาท)">
+                  <input style={inputStyle} type="number" value={a.debtBalance || ""} placeholder="200000"
+                    onChange={(e) => set({ debtBalance: +e.target.value || 0 })} />
+                </Field>
+                <Field label="Monthly Payment (บาท)">
+                  <input style={inputStyle} type="number" value={a.debtPayment || ""} placeholder="5000"
+                    onChange={(e) => set({ debtPayment: +e.target.value || 0 })} />
+                </Field>
+                {dti !== null && a.debtPayment > 0 && (
+                  <div style={{ background: T.bg, borderRadius: 12, padding: 12, fontSize: 14, color: T.ink }}>
+                    DTI = <b style={{ color: dti > 40 ? T.bad : dti > 20 ? T.warn : T.good }}>{dti}%</b>
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {step === 4 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Card>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 10 }}>🎯 Financial Goals</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {GOALS.map((g) => (
+                  <Chip key={g.id} active={a.goals.includes(g.id)} onClick={() => toggle("goals", g.id)}>{g.icon} {g.label}</Chip>
+                ))}
+              </div>
+            </Card>
+            {a.goals.map((gid) => {
+              const g = GOALS.find((x) => x.id === gid);
+              const d = a.goalDetails[gid] || {};
+              const setD = (patch) => set({ goalDetails: { ...a.goalDetails, [gid]: { ...d, ...patch } } });
+              return (
+                <Card key={gid}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 10 }}>{g.icon} {g.label}</div>
+                  <Field label="Target Amount (บาท)">
+                    <input style={inputStyle} type="number" value={d.amount || ""} placeholder="500000"
+                      onChange={(e) => setD({ amount: +e.target.value || 0 })} />
+                  </Field>
+                  <Field label="Timeline (ปี)">
+                    <input style={inputStyle} type="number" value={d.years || ""} placeholder="3"
+                      onChange={(e) => setD({ years: +e.target.value || 0 })} />
+                  </Field>
+                  <Field label="Priority">
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {["High", "Medium", "Low"].map((p) => (
+                        <Chip key={p} active={d.priority === p} onClick={() => setD({ priority: p })}>{p}</Chip>
+                      ))}
+                    </div>
+                  </Field>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {step === 5 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Card>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 10 }}>📊 Risk Appetite</div>
+              {RISK.map((r) => (
+                <OptionRow key={r.id} active={a.risk === r.id} onClick={() => set({ risk: r.id })}>
+                  <b>{r.label}</b> — {r.desc}
+                </OptionRow>
+              ))}
+            </Card>
+            <Card>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 10 }}>🏗️ Wealth Building Preference</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {WEALTH_PREF.map((w) => (
+                  <Chip key={w} active={a.wealthPref === w} onClick={() => set({ wealthPref: w })}>{w}</Chip>
+                ))}
+              </div>
+            </Card>
+            <Card>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.navy, marginBottom: 10 }}>🛍️ Lifestyle Preference</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {LIFESTYLE.map((l) => (
+                  <Chip key={l} active={a.lifestyle.includes(l)} onClick={() => toggle("lifestyle", l)}>{l}</Chip>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+          {step > 0 && (
+            <button onClick={() => setStep(step - 1)} style={{
+              flex: 1, padding: "13px 0", borderRadius: 12, border: `1.5px solid ${T.line}`,
+              background: "#fff", color: T.ink, fontSize: 15, cursor: "pointer", fontFamily: "inherit",
+            }}>← ย้อนกลับ</button>
+          )}
+          <button disabled={!canNext} onClick={() => (step < 5 ? setStep(step + 1) : onDone())} style={{
+            flex: 2, padding: "13px 0", borderRadius: 12, border: "none",
+            background: canNext ? T.blue : T.line, color: "#fff", fontSize: 15, fontWeight: 700,
+            cursor: canNext ? "pointer" : "not-allowed", fontFamily: "inherit",
+          }}>{step < 5 ? "ถัดไป →" : "ดู 6 Pillars 🎉"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===== EMERGENCY FUND PAGE =====
+function EmergencyFundPage({ answers, onBack }) {
+  const A = analyze(answers);
+  const [current, setCurrent] = React.useState(answers.savings || 0);
+  const [expense, setExpense] = React.useState(A.expense);
+  const [horizon, setHorizon] = React.useState(12);
+  const [autoOn, setAutoOn] = React.useState(false);
+
+  const target = expense * A.efMonthsNeeded;
+  const gap = Math.max(0, target - current);
+  const perMonth = gap > 0 ? Math.ceil(gap / horizon / 1000) * 1000 : 0;
+
+  return (
+    <div className="app-container">
+      <Header title="Emergency Fund" onBack={onBack} />
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+        <Card>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>📊 Analysis</div>
+          <div style={{ fontSize: 14, lineHeight: 1.8, color: T.ink }}>
+            รายได้ <b>{fmt(answers.income)} บาท/เดือน</b><br/>
+            อาชีพ <b>{A.occ.label}</b><br/>
+            ควรครอบคลุม <b style={{ color: T.blueDark }}>{A.efMonthsNeeded} เดือน</b> = <b>{fmt(target)} บาท</b>
+          </div>
+          <div style={{ marginTop: 12, background: T.bg, borderRadius: 12, padding: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 6 }}>
+              <span>ปัจจุบันมี</span>
+              <b>{fmt(current)} บาท</b>
+            </div>
+            <div style={{ height: 10, borderRadius: 6, background: T.line, overflow: "hidden" }}>
+              <div style={{ width: `${Math.min(100, (current / target) * 100)}%`, height: "100%", background: (current / target) >= 1 ? T.good : T.warn }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 6 }}>
+              <span>ยังขาด</span>
+              <b style={{ color: gap > 0 ? T.bad : T.good }}>{gap > 0 ? fmt(gap) : "ครบ ✅"}</b>
+            </div>
+          </div>
+        </Card>
+
+        {gap > 0 && (
+          <Card>
+            <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>🗓️ Savings Plan</div>
+            <Field label="ระยะเวลา (เดือน)">
+              <div style={{ display: "flex", gap: 8 }}>
+                {[6, 12, 18, 24].map((m) => (
+                  <Chip key={m} active={horizon === m} onClick={() => setHorizon(m)}>{m}</Chip>
+                ))}
+              </div>
+            </Field>
+            <div style={{ background: T.bg, borderRadius: 12, padding: 12, fontSize: 14 }}>
+              ออมเดือนละ <b style={{ color: T.blueDark }}>{fmt(perMonth)} บาท</b>
+            </div>
+          </Card>
+        )}
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontWeight: 700, color: T.navy }}>⚡ Auto-Saving</div>
+              <div style={{ fontSize: 13, color: T.sub }}>ตัดเงินออมอัตโนมัติ</div>
+            </div>
+            <button onClick={() => setAutoOn(!autoOn)} style={{
+              width: 50, height: 28, borderRadius: 14, border: "none", cursor: "pointer",
+              background: autoOn ? T.good : T.line, transition: "background .25s",
+            }} />
+          </div>
+          {autoOn && (
+            <div style={{ marginTop: 14, background: "#EAF9F0", borderRadius: 8, padding: 10, fontSize: 13, color: T.good }}>
+              ✅ เปิด Auto-Saving แล้ว {fmt(perMonth)} บาท/เดือน
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ===== TAX PLANNING PAGE =====
+function TaxPlanningPage({ answers, onBack }) {
+  const A = analyze(answers);
+  const basicDeduction = answers.maritalStatus === "Single" ? 60000 : 90000;
+  const dependentDeduction = (answers.dependents || 0) * 17500;
+  const ssfRmfDeduction = Math.min(answers.ssfRmfAmount || 0, A.annual * 0.3);
+  const totalDeduction = basicDeduction + dependentDeduction + ssfRmfDeduction;
+  const taxableIncome = Math.max(0, A.annual - 150000 - totalDeduction);
+  const estimatedTax = taxableIncome > 0 ? taxableIncome * 0.1 : 0;
+
+  const products = [
+    { name: "SSF Conservative Funds", tax: 30000, link: "https://ktx.or.th/mutual-fund" },
+    { name: "RMF Balanced Funds", tax: 50000, link: "https://ktx.or.th/rmf" },
+    { name: "SSF Equity Funds", tax: 30000, link: "https://ktx.or.th/ssf" },
+  ];
+
+  return (
+    <div className="app-container">
+      <Header title="Tax Planning" onBack={onBack} />
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+        <Card>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>📊 Itemized Deduction</div>
+          {[
+            ["ค่าลดหย่อนอุตรักษ์", basicDeduction],
+            ["ผู้พึ่งพา", dependentDeduction],
+            ["SSF/RMF", ssfRmfDeduction],
+          ].map(([name, val]) => val > 0 && (
+            <div key={name} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "6px 0", borderBottom: `1px solid ${T.line}` }}>
+              <span>{name}</span>
+              <b>{fmt(val)} บาท</b>
+            </div>
+          ))}
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, padding: "8px 0", fontWeight: 700, color: T.blueDark }}>
+            <span>รวม</span>
+            <b>{fmt(totalDeduction)} บาท</b>
+          </div>
+          <div style={{ marginTop: 8, fontSize: 12, color: T.sub, background: T.bg, padding: 8, borderRadius: 6 }}>
+            ประมาณการภาษี: {fmt(estimatedTax)} บาท
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10 }}>💼 Product Recommendations</div>
+          {products.map((p) => (
+            <div key={p.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 10, background: T.bg, borderRadius: 8, marginBottom: 8 }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{p.name}</div>
+                <div style={{ fontSize: 12, color: T.sub }}>ลดหย่อน {fmt(p.tax)} บาท</div>
+              </div>
+              <a href={p.link} target="_blank" rel="noopener noreferrer" style={{ background: T.blue, color: "#fff", padding: "6px 12px", borderRadius: 6, textDecoration: "none", fontSize: 12, fontWeight: 700 }}>
+                ซื้อ KTX →
+              </a>
+            </div>
+          ))}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ===== DAILY SPENDING PAGE =====
+function DailySpendingPage({ answers, onBack }) {
+  const A = analyze(answers);
+  
+  return (
+    <div className="app-container">
+      <Header title="Daily Spending" onBack={onBack} />
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+        <Card>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>📈 Financial Discipline</div>
+          <div style={{ fontSize: 14, lineHeight: 1.8, color: T.ink }}>
+            Priority: <b style={{ color: A.dti > 30 ? T.bad : T.warn }}>{A.dti > 30 ? "🔴 High" : "🟡 Medium"}</b>
+          </div>
+          {A.dti > 30 && (
+            <div style={{ marginTop: 10, background: "#FFE8E8", borderRadius: 8, padding: 10, fontSize: 13, color: T.bad }}>
+              ⚠️ DTI {A.dti.toFixed(1)}% — ควรควบคุมรายจ่าย
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10 }}>50/30/20 Budget</div>
+          {[
+            ["Needs (จำเป็น)", 50, T.blue],
+            ["Wants (ไลฟ์สไตล์)", 30, T.warn],
+            ["Savings (ออม)", 20, T.good],
+          ].map(([name, pct, col]) => (
+            <div key={name} style={{ marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                <span>{name}</span>
+                <b>{fmt(answers.income * pct / 100)} บาท</b>
+              </div>
+              <div style={{ height: 8, borderRadius: 4, background: T.line, overflow: "hidden" }}>
+                <div style={{ width: `${pct}%`, height: "100%", background: col }} />
+              </div>
+            </div>
+          ))}
+        </Card>
+
+        {answers.hasDebt && (
+          <Card>
+            <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>💳 Debt-to-Income</div>
+            <div style={{ fontSize: 14, color: T.ink }}>DTI = <b style={{ color: A.dti > 40 ? T.bad : T.warn }}>{A.dti.toFixed(1)}%</b></div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ===== SAVING GOALS PAGE =====
+function SavingGoalsPage({ answers, onBack }) {
+  const goals = answers.goals.map((gid) => ({
+    g: GOALS.find((x) => x.id === gid),
+    d: answers.goalDetails[gid] || {}
+  })).sort((a, b) => (a.d.years || 999) - (b.d.years || 999));
+
+  return (
+    <div className="app-container">
+      <Header title="Saving Goals" onBack={onBack} />
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+        {goals.length === 0 ? (
+          <Card><div style={{ fontSize: 14, color: T.sub }}>ยังไม่มีเป้าหมาย</div></Card>
+        ) : (
+          goals.map((g, i) => {
+            const perMonth = g.d.amount && g.d.years ? g.d.amount / (g.d.years * 12) : 0;
+            const getTimePriority = (years) => {
+              if (!years) return "Low";
+              if (years < 1) return "Very High";
+              if (years <= 3) return "High";
+              if (years <= 5) return "Medium";
+              return "Low";
+            };
+            return (
+              <Card key={i}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <b style={{ fontSize: 15 }}>{g.g.icon} {g.g.label}</b>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 12, background: "#FEF4E2", color: T.warn }}>
+                    {getTimePriority(g.d.years)}
+                  </span>
+                </div>
+                <div style={{ fontSize: 13, color: T.sub }}>
+                  {fmt(g.d.amount)} บาท · {g.d.years} ปี
+                </div>
+                {perMonth > 0 && (
+                  <div style={{ marginTop: 6, fontSize: 13, color: T.blueDark }}>
+                    Save {fmt(perMonth)} บาท/เดือน
+                  </div>
+                )}
+              </Card>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ===== INVESTMENT PAGE =====
+function InvestmentPage({ answers, onBack }) {
+  const [showChat, setShowChat] = React.useState(false);
+
+  const news = [
+    { title: "FinTech Growth in SE Asia", date: "2024-07-25" },
+    { title: "Healthcare Innovation Update", date: "2024-07-24" },
+    { title: "Tech Sector Recovery", date: "2024-07-23" },
+  ];
+
+  return (
+    <div className="app-container">
+      <Header title="Investment" onBack={onBack} />
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+        <Card>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>📰 News Feed</div>
+          {news.map((n, i) => (
+            <div key={i} style={{ padding: 10, background: T.bg, borderRadius: 8, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{n.title}</div>
+                <div style={{ fontSize: 11, color: T.sub }}>{n.date}</div>
+              </div>
+              <a href="https://ktx.or.th/invest" target="_blank" rel="noopener noreferrer" style={{ background: T.blue, color: "#fff", padding: "4px 10px", borderRadius: 6, textDecoration: "none", fontSize: 11, fontWeight: 700, marginLeft: 8 }}>
+                ซื้อ
+              </a>
+            </div>
+          ))}
+        </Card>
+
+        <Card>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>🤖 AI Investment Assistant</div>
+          <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.7, marginBottom: 12 }}>
+            📊 สัดส่วนแนะนำ:<br/>
+            • 60% Stocks<br/>
+            • 30% Bonds<br/>
+            • 10% Alternatives
+          </div>
+          <button onClick={() => setShowChat(!showChat)} style={{
+            width: "100%", padding: "10px", background: T.blue, color: "#fff", border: "none",
+            borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+          }}>
+            💬 Ask AI Assistant
+          </button>
+          {showChat && (
+            <div style={{ marginTop: 12, padding: 12, background: T.bg, borderRadius: 8 }}>
+              <div style={{ fontSize: 12, color: T.ink, marginBottom: 8 }}>
+                💡 ตามประวัติของคุณ แนะนำให้เริ่ม DCA Monthly ตั้งแต่ตอนนี้
+              </div>
+              <a href="https://ktx.or.th/open-account" target="_blank" rel="noopener noreferrer" style={{
+                display: "block", textAlign: "center", padding: "8px", background: T.blue, color: "#fff",
+                borderRadius: 6, textDecoration: "none", fontWeight: 700, fontSize: 13,
+              }}>
+                เปิดบัญชีที่ KTX →
+              </a>
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ===== INSURANCE PAGE =====
+function InsurancePage({ answers, onBack }) {
+  const has = (t) => answers.insurance.includes(t);
+  const coverage = [has("Health Insurance") ? 1 : 0, has("Life Insurance") ? 1 : 0, has("Accident Insurance") ? 1 : 0].reduce((a, b) => a + b, 0);
+
+  return (
+    <div className="app-container">
+      <Header title="Insurance" onBack={onBack} />
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+        <Card>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>🛡️ Protection Status</div>
+          <div style={{ fontSize: 14, lineHeight: 1.8, color: T.ink }}>
+            Priority: <b style={{ color: coverage === 0 ? T.bad : T.warn }}>{coverage === 0 ? "🔴 High" : "🟡 Medium"}</b>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            {[
+              ["Health Insurance", has("Health Insurance")],
+              ["Life Insurance", has("Life Insurance")],
+              ["Accident Insurance", has("Accident Insurance")],
+            ].map(([type, status]) => (
+              <div key={type} style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: `1px solid ${T.line}` }}>
+                <span style={{ fontSize: 18 }}>{status ? "✅" : "⚠️"}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{type}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ===== DASHBOARD =====
+function Dashboard({ answers, go, onEdit }) {
+  const A = analyze(answers);
+  const pillars = [
+    { id: "emergency", en: "Emergency Fund", icon: "🛟", score: A.efScore },
+    { id: "tax", en: "Tax Planning", icon: "🧾", score: A.taxScore },
+    { id: "spending", en: "Daily Spending", icon: "💳", score: A.spendScore },
+    { id: "goals", en: "Saving Goals", icon: "🎯", score: A.goalsScore },
+    { id: "invest", en: "Investment", icon: "📈", score: A.invScore },
+    { id: "insurance", en: "Insurance", icon: "🛡️", score: A.insScore },
+  ];
+  const weakest = [...pillars].sort((x, y) => x.score - y.score).slice(0, 2);
+
+  return (
+    <div className="app-container">
+      <Header title="6 Financial Pillars" sub={`${A.occ.label} · ${fmt(answers.income)} บาท/เดือน`}>
+        <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 16, background: "rgba(255,255,255,.14)", borderRadius: 16, padding: 14 }}>
+          <div style={{ position: "relative", width: 72, height: 72 }}>
+            <Ring score={A.overall} size={72} stroke={8} />
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800 }}>{A.overall}</div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Financial Health</div>
+            <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>Focus: {weakest.map(w => w.en).join(" + ")}</div>
+            <button onClick={onEdit} style={{ marginTop: 6, background: "rgba(255,255,255,.18)", color: "#fff", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>✏️ Edit</button>
+          </div>
+        </div>
+      </Header>
+      <div style={{ padding: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
+          {pillars.map((p) => (
+            <Card key={p.id} onClick={() => go(p.id)} style={{ display: "flex", flexDirection: "column", gap: 8, cursor: "pointer" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 26 }}>{p.icon}</span>
+                <div style={{ position: "relative", width: 44, height: 44 }}>
+                  <Ring score={p.score} size={44} stroke={5} />
+                  <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>{p.score}</div>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{p.en}</div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===== MAIN APP =====
+function App() {
+  const [unlocked, setUnlocked] = useState(false);
+  const [page, setPage] = useState('feature');
+  const [answers, setAnswers] = useState({
+    occupation: null, income: 0, incomeType: null, maritalStatus: null, dependents: 0, ssfRmfAmount: 0, lifeInsurancePremium: 0, charitableDonation: 0,
+    savings: 0, efStatus: null, investStatus: null, investFreq: null, investTypes: [], stockSectorsTH: [], stockSectorsINT: [], bondTypes: [], industries: [], insurance: [],
+    hasDebt: null, debtTypes: [], debtBalance: 0, debtPayment: 0,
+    goals: [], goalDetails: {},
+    risk: null, wealthPref: null, lifestyle: [],
+    expense: 0,
+  });
+
+  if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
+
+  return (
+    <div style={{ background: T.bg, minHeight: "100vh" }}>
+      {page === 'feature' && <FeaturePage onStart={() => setPage('onboarding')} />}
+      {page === 'onboarding' && <Onboarding answers={answers} setAnswers={setAnswers} onDone={() => setPage('dashboard')} />}
+      {page === 'dashboard' && <Dashboard answers={answers} go={setPage} onEdit={() => setPage('onboarding')} />}
+      {page === 'emergency' && <EmergencyFundPage answers={answers} onBack={() => setPage('dashboard')} />}
+      {page === 'tax' && <TaxPlanningPage answers={answers} onBack={() => setPage('dashboard')} />}
+      {page === 'spending' && <DailySpendingPage answers={answers} onBack={() => setPage('dashboard')} />}
+      {page === 'goals' && <SavingGoalsPage answers={answers} onBack={() => setPage('dashboard')} />}
+      {page === 'invest' && <InvestmentPage answers={answers} onBack={() => setPage('dashboard')} />}
+      {page === 'insurance' && <InsurancePage answers={answers} onBack={() => setPage('dashboard')} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
