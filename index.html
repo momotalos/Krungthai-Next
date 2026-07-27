@@ -841,9 +841,9 @@ function SavingGoalsPage({ answers, onBack }) {
   );
 }
 
-// ===== INVESTMENT PAGE (AI-Powered) =====
+// ===== INVESTMENT PAGE (AI-Powered via Gemini) =====
 function InvestmentPage({ answers, onBack, onBuyStock }) {
-  const [tab, setTab] = React.useState("news"); // news | ai
+  const [tab, setTab] = React.useState("news");
   const [newsItems, setNewsItems] = React.useState(null);
   const [newsLoading, setNewsLoading] = React.useState(false);
   const [chatMessages, setChatMessages] = React.useState([]);
@@ -851,22 +851,29 @@ function InvestmentPage({ answers, onBack, onBuyStock }) {
   const [chatLoading, setChatLoading] = React.useState(false);
   const [initialized, setInitialized] = React.useState(false);
 
-  // Build user profile context string
+  // Gemini proxy helper
+  async function callGemini({ systemInstruction, contents, temperature, maxOutputTokens }) {
+    const resp = await fetch("/.netlify/functions/gemini-proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ systemInstruction, contents, temperature: temperature || 0.7, maxOutputTokens: maxOutputTokens || 1024 }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || "API error");
+    return data.text || "";
+  }
+
+  // Build user profile context
   const profileCtx = React.useMemo(() => {
     const A = analyze(answers);
     const inds = (answers.industries || []).join(", ") || "None selected";
     const types = (answers.investTypes || []).join(", ") || "None";
     const thSectors = (answers.stockSectorsTH || []).join(", ") || "None";
     const intSectors = (answers.stockSectorsINT || []).join(", ") || "None";
-    const risk = answers.risk || "moderate";
-    const freq = answers.investFreq || "N/A";
-    const status = answers.investStatus || "never";
-    const income = answers.income || 0;
-    const wealthPref = answers.wealthPref || "N/A";
     return `User Financial Profile:
-- Occupation: ${A.occ.label}, Monthly Income: ${fmt(income)} THB
-- Investment Status: ${status}, Frequency: ${freq}
-- Risk Appetite: ${risk}, Wealth Preference: ${wealthPref}
+- Occupation: ${A.occ.label}, Monthly Income: ${fmt(answers.income || 0)} THB
+- Investment Status: ${answers.investStatus || "never"}, Frequency: ${answers.investFreq || "N/A"}
+- Risk Appetite: ${answers.risk || "moderate"}, Wealth Preference: ${answers.wealthPref || "N/A"}
 - Interested Industries: ${inds}
 - Investment Types: ${types}
 - Thai Stock Sectors: ${thSectors}
@@ -876,7 +883,7 @@ function InvestmentPage({ answers, onBack, onBuyStock }) {
 - Overall Financial Health: ${A.overall}/100`;
   }, [answers]);
 
-  // Generate AI news on first load
+  // Generate news on mount
   React.useEffect(() => {
     if (!initialized) { setInitialized(true); generateNews(); }
   }, []);
@@ -884,109 +891,99 @@ function InvestmentPage({ answers, onBack, onBuyStock }) {
   async function generateNews() {
     setNewsLoading(true);
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: `${profileCtx}
+      const text = await callGemini({
+        systemInstruction: "You are a financial news curator for a Thai banking app. Always return ONLY a valid JSON array. No markdown, no backticks, no explanation.",
+        contents: [{ role: "user", parts: [{ text: `${profileCtx}
 
-Based on this investor's profile, generate 5 personalized investment news/insight articles that are relevant to their interests and risk level. Return ONLY valid JSON array, no markdown, no backticks:
-[{"title":"...","summary":"...one line Thai summary...","category":"...industry or sector tag...","sentiment":"positive|negative|neutral","ticker":"...relevant stock ticker if applicable or null..."}]
+Based on this investor's profile, generate 5 personalized investment news/insight articles relevant to their interests, selected industries, sectors, and risk level. Return ONLY a valid JSON array:
+[{"title":"...English title...","summary":"...one line Thai summary...","category":"...industry or sector tag...","sentiment":"positive|negative|neutral","ticker":"...relevant stock ticker or null..."}]
 
-Make the titles in English but summaries in Thai. Match their selected industries and sectors. Include real company/sector references. If they selected FinTech, show FinTech news. If Healthcare, show Healthcare news. Mix Thai and international news.` }],
-        }),
+Rules:
+- Match their selected industries and sectors closely
+- If they picked FinTech, show FinTech news; if Healthcare, show Healthcare news
+- Include a mix of Thai (SET) and international stocks
+- Make titles specific and realistic
+- Summaries in Thai, 1-2 sentences` }] }],
+        temperature: 0.8,
+        maxOutputTokens: 800,
       });
-      const data = await resp.json();
-      const text = (data.content || []).map(b => b.text || "").join("");
       const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
       setNewsItems(parsed);
     } catch (e) {
-      console.error("News generation error:", e);
-      setNewsItems([
-        { title: "Unable to load AI news", summary: "กรุณาลองใหม่", category: "System", sentiment: "neutral", ticker: null },
-      ]);
+      console.error("News error:", e);
+      setNewsItems([{ title: "Unable to load AI news", summary: "กรุณาลองใหม่อีกครั้ง — " + e.message, category: "System", sentiment: "neutral", ticker: null }]);
     }
     setNewsLoading(false);
   }
 
-  // AI Chat
+  // AI Chat system prompt
+  const systemPrompt = `You are Krungthai Investment AI Assistant — an expert financial advisor in the Krungthai NEXT banking app.
+
+${profileCtx}
+
+CAPABILITIES & RULES:
+1. Deep knowledge of investment fundamentals: asset allocation, diversification, risk management, DCA, value investing, growth investing, technical analysis, fundamental analysis.
+2. You have access to KAsset Research Reports (mock data) and can provide:
+   - Stock recommendations with target price ranges
+   - Buy/Sell/Hold ratings with conviction levels
+   - Optimal entry prices based on technical + fundamental analysis
+   - Sector outlook and market commentary
+3. When recommending stocks, ALWAYS format as:
+   **[TICKER]** — [Company Name]
+   Rating: [Buy/Sell/Hold]
+   Current Price: [realistic mock price] THB
+   Target Price: [range] THB
+   Optimal Entry: [price] THB
+   Source: KAsset Research Report
+
+4. Thai stocks: use SET tickers (KBANK, SCB, ADVANC, CPALL, PTT, BH, BDMS, DELTA, AOT, SCC, GULF, OR, TRUE, MINT, CPN, BBL, KTB, PTTGC)
+5. International: AAPL, MSFT, GOOGL, NVDA, AMZN, META, TSLA, etc.
+6. Match recommendations to the user's risk appetite and interested sectors.
+7. When user asks to buy a stock or you recommend buying, end your message with exactly: [[BUY:TICKER:PRICE]] (e.g. [[BUY:KBANK:142.50]]) — the app will render a buy button.
+8. Respond primarily in Thai, use English for financial terms.
+9. Keep responses concise and actionable.
+10. Always end with disclaimer: "⚠️ ข้อมูลนี้เป็นการวิเคราะห์เบื้องต้น ไม่ใช่คำแนะนำการลงทุน ควรศึกษาข้อมูลเพิ่มเติมก่อนตัดสินใจ"`;
+
   async function sendChat(userMsg) {
     if (!userMsg.trim()) return;
     const newMsgs = [...chatMessages, { role: "user", content: userMsg }];
     setChatMessages(newMsgs);
     setChatInput("");
     setChatLoading(true);
-
     try {
-      const history = newMsgs.map(m => ({ role: m.role, content: m.content }));
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          system: `You are Krungthai Investment AI Assistant — an expert financial advisor integrated into the Krungthai NEXT banking app.
-
-${profileCtx}
-
-CAPABILITIES & RULES:
-1. You have deep knowledge of investment fundamentals: asset allocation, diversification, risk management, DCA, value investing, growth investing.
-2. You have access to mock KAsset research reports and can provide:
-   - Stock recommendations with target price ranges
-   - Buy/Sell/Hold ratings
-   - Optimal entry prices based on technical + fundamental analysis
-3. When recommending stocks, ALWAYS format them as:
-   **[TICKER]** — [Company Name]
-   Rating: [Buy/Sell/Hold]
-   Current Price: [mock price] THB
-   Target Price: [mock range] THB
-   Optimal Entry: [mock price] THB
-   Source: KAsset Research Report
-   
-4. For Thai stocks use SET tickers (e.g. KBANK, SCB, ADVANC, CPALL, PTT, BH, BDMS, DELTA, AOT, SCC)
-5. For international stocks use real tickers (AAPL, MSFT, GOOGL, NVDA, AMZN, etc.)
-6. Match recommendations to the user's risk appetite and interested sectors.
-7. When the user asks about buying, end your message with: [[BUY:TICKER:PRICE]] so the app can render a buy button.
-8. Respond in Thai primarily, mixing English for financial terms.
-9. Keep responses concise and actionable.
-10. Always add a disclaimer: "ข้อมูลนี้เป็นการวิเคราะห์เบื้องต้น ไม่ใช่คำแนะนำการลงทุน ควรศึกษาข้อมูลเพิ่มเติมก่อนตัดสินใจ"`,
-          messages: history,
-        }),
-      });
-      const data = await resp.json();
-      const aiText = (data.content || []).map(b => b.text || "").join("");
+      const contents = newMsgs.map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
+      const aiText = await callGemini({ systemInstruction: systemPrompt, contents, temperature: 0.7, maxOutputTokens: 1024 });
       setChatMessages([...newMsgs, { role: "assistant", content: aiText }]);
     } catch (e) {
-      setChatMessages([...newMsgs, { role: "assistant", content: "ขออภัย ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่" }]);
+      setChatMessages([...newMsgs, { role: "assistant", content: "ขออภัย ไม่สามารถเชื่อมต่อได้: " + e.message }]);
     }
     setChatLoading(false);
   }
 
   // Parse [[BUY:TICKER:PRICE]] from AI response
   function renderAIMessage(text) {
-    const buyMatch = text.match(/\[\[BUY:([A-Z0-9.]+):([0-9.]+)\]\]/);
+    const buyMatches = [...text.matchAll(/\[\[BUY:([A-Z0-9.]+):([0-9.]+)\]\]/g)];
     const clean = text.replace(/\[\[BUY:[A-Z0-9.]+:[0-9.]+\]\]/g, "").trim();
     const lines = clean.split("\n");
-
     return (
       <div>
         {lines.map((line, i) => {
           if (line.startsWith("**") && line.includes("**")) {
-            const bold = line.replace(/\*\*/g, "");
-            return <div key={i} style={{ fontWeight: 700, color: T.navy, marginTop: 6 }}>{bold}</div>;
+            return <div key={i} style={{ fontWeight: 700, color: T.navy, marginTop: 6 }}>{line.replace(/\*\*/g, "")}</div>;
           }
           return <div key={i} style={{ fontSize: 13, lineHeight: 1.7, color: T.ink }}>{line}</div>;
         })}
-        {buyMatch && (
-          <button onClick={() => onBuyStock && onBuyStock(buyMatch[1], parseFloat(buyMatch[2]))} style={{
+        {buyMatches.map((m, i) => (
+          <button key={i} onClick={() => onBuyStock && onBuyStock(m[1], parseFloat(m[2]))} style={{
             marginTop: 10, width: "100%", padding: 10, background: T.good, color: "#fff",
             border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
           }}>
-            🛒 ซื้อ {buyMatch[1]} ที่ {fmt(parseFloat(buyMatch[2]))} THB →
+            🛒 ซื้อ {m[1]} ที่ {fmt(parseFloat(m[2]))} THB →
           </button>
-        )}
+        ))}
       </div>
     );
   }
@@ -997,7 +994,6 @@ CAPABILITIES & RULES:
     <div className="app-container">
       <Header title="Investment" onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-
         <div style={{ display: "flex", gap: 8 }}>
           <Chip active={tab === "news"} onClick={() => setTab("news")}>📰 AI News Feed</Chip>
           <Chip active={tab === "ai"} onClick={() => setTab("ai")}>🤖 AI Assistant</Chip>
@@ -1006,7 +1002,7 @@ CAPABILITIES & RULES:
         {tab === "news" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ fontSize: 12, color: T.sub, background: "#F0F8FF", padding: 8, borderRadius: 8 }}>
-              📊 News ถูกคัดเลือกจาก AI ตาม Industries, Sectors และ Risk ที่คุณเลือก
+              📊 News คัดสรรโดย AI ตาม Industries, Sectors และ Risk ที่คุณเลือกไว้
             </div>
             {newsLoading ? (
               <Card>
@@ -1032,9 +1028,7 @@ CAPABILITIES & RULES:
                     <button onClick={() => onBuyStock && onBuyStock(n.ticker, null)} style={{
                       background: T.blue, color: "#fff", padding: "6px 10px", borderRadius: 6,
                       border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-                    }}>
-                      ซื้อ {n.ticker} →
-                    </button>
+                    }}>ซื้อ {n.ticker} →</button>
                   )}
                 </div>
               </Card>
@@ -1050,12 +1044,11 @@ CAPABILITIES & RULES:
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <Card style={{ background: "#F0F8FF" }}>
               <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.7 }}>
-                🤖 <b>Krungthai Investment AI</b><br/>
+                🤖 <b>Krungthai Investment AI</b> <span style={{ fontSize: 10, color: T.sub }}>Powered by Gemini</span><br/>
                 ถามได้ทุกเรื่อง: แนะนำหุ้น, วิเคราะห์พอร์ต, DCA strategy, ราคาเป้าหมาย<br/>
                 <span style={{ fontSize: 11, color: T.sub }}>ข้อมูลอ้างอิงจาก KAsset Research Reports</span>
               </div>
             </Card>
-
             <div style={{ minHeight: 200, maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
               {chatMessages.length === 0 && (
                 <div style={{ textAlign: "center", padding: 20, color: T.sub, fontSize: 13 }}>
@@ -1086,15 +1079,10 @@ CAPABILITIES & RULES:
                 </div>
               )}
             </div>
-
             <div style={{ display: "flex", gap: 8 }}>
-              <input
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
+              <input value={chatInput} onChange={(e) => setChatInput(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && !chatLoading && sendChat(chatInput)}
-                placeholder="ถามเรื่องการลงทุน..."
-                style={{ ...inputStyle, flex: 1 }}
-              />
+                placeholder="ถามเรื่องการลงทุน..." style={{ ...inputStyle, flex: 1 }} />
               <button disabled={chatLoading || !chatInput.trim()} onClick={() => sendChat(chatInput)} style={{
                 padding: "10px 16px", background: chatInput.trim() ? T.blue : T.line,
                 color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700,
@@ -1107,6 +1095,7 @@ CAPABILITIES & RULES:
     </div>
   );
 }
+
 
 // ===== STOCK BUY PAGE (Mock) =====
 function StockBuyPage({ ticker, price, answers, onBack }) {
