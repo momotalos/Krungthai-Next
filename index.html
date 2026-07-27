@@ -841,67 +841,409 @@ function SavingGoalsPage({ answers, onBack }) {
   );
 }
 
-// ===== INVESTMENT PAGE =====
-function InvestmentPage({ answers, onBack }) {
-  const [showChat, setShowChat] = React.useState(false);
+// ===== INVESTMENT PAGE (AI-Powered) =====
+function InvestmentPage({ answers, onBack, onBuyStock }) {
+  const [tab, setTab] = React.useState("news"); // news | ai
+  const [newsItems, setNewsItems] = React.useState(null);
+  const [newsLoading, setNewsLoading] = React.useState(false);
+  const [chatMessages, setChatMessages] = React.useState([]);
+  const [chatInput, setChatInput] = React.useState("");
+  const [chatLoading, setChatLoading] = React.useState(false);
+  const [initialized, setInitialized] = React.useState(false);
 
-  const news = [
-    { title: "FinTech Growth in SE Asia", date: "2024-07-25" },
-    { title: "Healthcare Innovation Update", date: "2024-07-24" },
-    { title: "Tech Sector Recovery", date: "2024-07-23" },
-  ];
+  // Build user profile context string
+  const profileCtx = React.useMemo(() => {
+    const A = analyze(answers);
+    const inds = (answers.industries || []).join(", ") || "None selected";
+    const types = (answers.investTypes || []).join(", ") || "None";
+    const thSectors = (answers.stockSectorsTH || []).join(", ") || "None";
+    const intSectors = (answers.stockSectorsINT || []).join(", ") || "None";
+    const risk = answers.risk || "moderate";
+    const freq = answers.investFreq || "N/A";
+    const status = answers.investStatus || "never";
+    const income = answers.income || 0;
+    const wealthPref = answers.wealthPref || "N/A";
+    return `User Financial Profile:
+- Occupation: ${A.occ.label}, Monthly Income: ${fmt(income)} THB
+- Investment Status: ${status}, Frequency: ${freq}
+- Risk Appetite: ${risk}, Wealth Preference: ${wealthPref}
+- Interested Industries: ${inds}
+- Investment Types: ${types}
+- Thai Stock Sectors: ${thSectors}
+- International Sectors: ${intSectors}
+- Emergency Fund Score: ${A.efScore}/100
+- Investment Score: ${A.invScore}/100
+- Overall Financial Health: ${A.overall}/100`;
+  }, [answers]);
+
+  // Generate AI news on first load
+  React.useEffect(() => {
+    if (!initialized) { setInitialized(true); generateNews(); }
+  }, []);
+
+  async function generateNews() {
+    setNewsLoading(true);
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: `${profileCtx}
+
+Based on this investor's profile, generate 5 personalized investment news/insight articles that are relevant to their interests and risk level. Return ONLY valid JSON array, no markdown, no backticks:
+[{"title":"...","summary":"...one line Thai summary...","category":"...industry or sector tag...","sentiment":"positive|negative|neutral","ticker":"...relevant stock ticker if applicable or null..."}]
+
+Make the titles in English but summaries in Thai. Match their selected industries and sectors. Include real company/sector references. If they selected FinTech, show FinTech news. If Healthcare, show Healthcare news. Mix Thai and international news.` }],
+        }),
+      });
+      const data = await resp.json();
+      const text = (data.content || []).map(b => b.text || "").join("");
+      const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+      setNewsItems(parsed);
+    } catch (e) {
+      console.error("News generation error:", e);
+      setNewsItems([
+        { title: "Unable to load AI news", summary: "กรุณาลองใหม่", category: "System", sentiment: "neutral", ticker: null },
+      ]);
+    }
+    setNewsLoading(false);
+  }
+
+  // AI Chat
+  async function sendChat(userMsg) {
+    if (!userMsg.trim()) return;
+    const newMsgs = [...chatMessages, { role: "user", content: userMsg }];
+    setChatMessages(newMsgs);
+    setChatInput("");
+    setChatLoading(true);
+
+    try {
+      const history = newMsgs.map(m => ({ role: m.role, content: m.content }));
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1000,
+          system: `You are Krungthai Investment AI Assistant — an expert financial advisor integrated into the Krungthai NEXT banking app.
+
+${profileCtx}
+
+CAPABILITIES & RULES:
+1. You have deep knowledge of investment fundamentals: asset allocation, diversification, risk management, DCA, value investing, growth investing.
+2. You have access to mock KAsset research reports and can provide:
+   - Stock recommendations with target price ranges
+   - Buy/Sell/Hold ratings
+   - Optimal entry prices based on technical + fundamental analysis
+3. When recommending stocks, ALWAYS format them as:
+   **[TICKER]** — [Company Name]
+   Rating: [Buy/Sell/Hold]
+   Current Price: [mock price] THB
+   Target Price: [mock range] THB
+   Optimal Entry: [mock price] THB
+   Source: KAsset Research Report
+   
+4. For Thai stocks use SET tickers (e.g. KBANK, SCB, ADVANC, CPALL, PTT, BH, BDMS, DELTA, AOT, SCC)
+5. For international stocks use real tickers (AAPL, MSFT, GOOGL, NVDA, AMZN, etc.)
+6. Match recommendations to the user's risk appetite and interested sectors.
+7. When the user asks about buying, end your message with: [[BUY:TICKER:PRICE]] so the app can render a buy button.
+8. Respond in Thai primarily, mixing English for financial terms.
+9. Keep responses concise and actionable.
+10. Always add a disclaimer: "ข้อมูลนี้เป็นการวิเคราะห์เบื้องต้น ไม่ใช่คำแนะนำการลงทุน ควรศึกษาข้อมูลเพิ่มเติมก่อนตัดสินใจ"`,
+          messages: history,
+        }),
+      });
+      const data = await resp.json();
+      const aiText = (data.content || []).map(b => b.text || "").join("");
+      setChatMessages([...newMsgs, { role: "assistant", content: aiText }]);
+    } catch (e) {
+      setChatMessages([...newMsgs, { role: "assistant", content: "ขออภัย ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่" }]);
+    }
+    setChatLoading(false);
+  }
+
+  // Parse [[BUY:TICKER:PRICE]] from AI response
+  function renderAIMessage(text) {
+    const buyMatch = text.match(/\[\[BUY:([A-Z0-9.]+):([0-9.]+)\]\]/);
+    const clean = text.replace(/\[\[BUY:[A-Z0-9.]+:[0-9.]+\]\]/g, "").trim();
+    const lines = clean.split("\n");
+
+    return (
+      <div>
+        {lines.map((line, i) => {
+          if (line.startsWith("**") && line.includes("**")) {
+            const bold = line.replace(/\*\*/g, "");
+            return <div key={i} style={{ fontWeight: 700, color: T.navy, marginTop: 6 }}>{bold}</div>;
+          }
+          return <div key={i} style={{ fontSize: 13, lineHeight: 1.7, color: T.ink }}>{line}</div>;
+        })}
+        {buyMatch && (
+          <button onClick={() => onBuyStock && onBuyStock(buyMatch[1], parseFloat(buyMatch[2]))} style={{
+            marginTop: 10, width: "100%", padding: 10, background: T.good, color: "#fff",
+            border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+          }}>
+            🛒 ซื้อ {buyMatch[1]} ที่ {fmt(parseFloat(buyMatch[2]))} THB →
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const sentimentColor = { positive: T.good, negative: T.bad, neutral: T.warn };
 
   return (
     <div className="app-container">
       <Header title="Investment" onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-        <Card>
-          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>📰 News Feed</div>
-          {news.map((n, i) => (
-            <div key={i} style={{ padding: 10, background: T.bg, borderRadius: 8, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 13 }}>{n.title}</div>
-                <div style={{ fontSize: 11, color: T.sub }}>{n.date}</div>
-              </div>
-              <a href="https://ktx.or.th/invest" target="_blank" rel="noopener noreferrer" style={{ background: T.blue, color: "#fff", padding: "4px 10px", borderRadius: 6, textDecoration: "none", fontSize: 11, fontWeight: 700, marginLeft: 8 }}>
-                ซื้อ
-              </a>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <Chip active={tab === "news"} onClick={() => setTab("news")}>📰 AI News Feed</Chip>
+          <Chip active={tab === "ai"} onClick={() => setTab("ai")}>🤖 AI Assistant</Chip>
+        </div>
+
+        {tab === "news" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontSize: 12, color: T.sub, background: "#F0F8FF", padding: 8, borderRadius: 8 }}>
+              📊 News ถูกคัดเลือกจาก AI ตาม Industries, Sectors และ Risk ที่คุณเลือก
             </div>
-          ))}
+            {newsLoading ? (
+              <Card>
+                <div style={{ textAlign: "center", padding: 30, color: T.sub }}>
+                  <div style={{ fontSize: 24, marginBottom: 8 }}>🔄</div>
+                  <div style={{ fontSize: 13 }}>AI กำลังวิเคราะห์ profile และคัดสรรข่าวให้คุณ...</div>
+                </div>
+              </Card>
+            ) : newsItems && newsItems.map((n, i) => (
+              <Card key={i}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: sentimentColor[n.sentiment] || T.warn, color: "#fff" }}>
+                        {n.sentiment === "positive" ? "▲ Positive" : n.sentiment === "negative" ? "▼ Negative" : "● Neutral"}
+                      </span>
+                      <span style={{ fontSize: 11, color: T.sub }}>{n.category}</span>
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: T.navy, marginBottom: 4 }}>{n.title}</div>
+                    <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.6 }}>{n.summary}</div>
+                  </div>
+                  {n.ticker && (
+                    <button onClick={() => onBuyStock && onBuyStock(n.ticker, null)} style={{
+                      background: T.blue, color: "#fff", padding: "6px 10px", borderRadius: 6,
+                      border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                    }}>
+                      ซื้อ {n.ticker} →
+                    </button>
+                  )}
+                </div>
+              </Card>
+            ))}
+            <button onClick={generateNews} disabled={newsLoading} style={{
+              padding: 10, background: "#fff", color: T.blue, border: `1.5px solid ${T.blue}`,
+              borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+            }}>🔄 Refresh News</button>
+          </div>
+        )}
+
+        {tab === "ai" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <Card style={{ background: "#F0F8FF" }}>
+              <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.7 }}>
+                🤖 <b>Krungthai Investment AI</b><br/>
+                ถามได้ทุกเรื่อง: แนะนำหุ้น, วิเคราะห์พอร์ต, DCA strategy, ราคาเป้าหมาย<br/>
+                <span style={{ fontSize: 11, color: T.sub }}>ข้อมูลอ้างอิงจาก KAsset Research Reports</span>
+              </div>
+            </Card>
+
+            <div style={{ minHeight: 200, maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+              {chatMessages.length === 0 && (
+                <div style={{ textAlign: "center", padding: 20, color: T.sub, fontSize: 13 }}>
+                  <div style={{ marginBottom: 12 }}>💬 ลองถามเช่น:</div>
+                  {["แนะนำหุ้นไทยที่น่าสนใจ", "ควรลงทุนอะไรตอนนี้", "วิเคราะห์ KBANK ให้หน่อย", "อยากเริ่ม DCA ควรทำยังไง"].map((q) => (
+                    <button key={q} onClick={() => sendChat(q)} style={{
+                      display: "block", width: "100%", padding: "8px 12px", marginBottom: 6,
+                      background: "#fff", border: `1px solid ${T.line}`, borderRadius: 8,
+                      fontSize: 12, color: T.ink, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                    }}>💡 {q}</button>
+                  ))}
+                </div>
+              )}
+              {chatMessages.map((m, i) => (
+                <div key={i} style={{
+                  alignSelf: m.role === "user" ? "flex-end" : "flex-start",
+                  maxWidth: "85%", padding: "10px 14px", borderRadius: 14,
+                  background: m.role === "user" ? T.blue : "#F0F0F0",
+                  color: m.role === "user" ? "#fff" : T.ink,
+                  fontSize: 13, lineHeight: 1.7,
+                }}>
+                  {m.role === "assistant" ? renderAIMessage(m.content) : m.content}
+                </div>
+              ))}
+              {chatLoading && (
+                <div style={{ alignSelf: "flex-start", padding: "10px 14px", borderRadius: 14, background: "#F0F0F0", fontSize: 13, color: T.sub }}>
+                  ⏳ AI กำลังวิเคราะห์...
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && !chatLoading && sendChat(chatInput)}
+                placeholder="ถามเรื่องการลงทุน..."
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <button disabled={chatLoading || !chatInput.trim()} onClick={() => sendChat(chatInput)} style={{
+                padding: "10px 16px", background: chatInput.trim() ? T.blue : T.line,
+                color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700,
+                cursor: chatInput.trim() ? "pointer" : "not-allowed", fontFamily: "inherit",
+              }}>→</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ===== STOCK BUY PAGE (Mock) =====
+function StockBuyPage({ ticker, price, answers, onBack }) {
+  const [qty, setQty] = React.useState(100);
+  const [orderType, setOrderType] = React.useState("market");
+  const [limitPrice, setLimitPrice] = React.useState(price || 0);
+  const [confirmed, setConfirmed] = React.useState(false);
+
+  const mockPrice = price || (ticker === "KBANK" ? 142.5 : ticker === "SCB" ? 98.75 : ticker === "PTT" ? 34.25 : ticker === "ADVANC" ? 238.0 : ticker === "CPALL" ? 62.5 : ticker === "BH" ? 198.0 : ticker === "DELTA" ? 720.0 : ticker === "AOT" ? 68.5 : ticker === "NVDA" ? 135.2 : ticker === "AAPL" ? 198.5 : 100.0);
+  const execPrice = orderType === "market" ? mockPrice : limitPrice;
+  const total = qty * execPrice;
+
+  const mockData = {
+    open: (mockPrice * 0.99).toFixed(2),
+    high: (mockPrice * 1.02).toFixed(2),
+    low: (mockPrice * 0.97).toFixed(2),
+    change: ((Math.random() - 0.4) * 4).toFixed(2),
+    volume: fmt(Math.round(Math.random() * 50000000)),
+    pe: (8 + Math.random() * 20).toFixed(1),
+    target: `${(mockPrice * 1.08).toFixed(0)} — ${(mockPrice * 1.18).toFixed(0)}`,
+    rating: "Buy",
+  };
+  const changeNum = parseFloat(mockData.change);
+
+  if (confirmed) {
+    return (
+      <div className="app-container">
+        <Header title="Order Confirmed" />
+        <div style={{ padding: 20, textAlign: "center" }}>
+          <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: T.navy, marginBottom: 8 }}>คำสั่งซื้อสำเร็จ</div>
+          <Card style={{ textAlign: "left", marginTop: 20 }}>
+            <div style={{ fontSize: 14, lineHeight: 2, color: T.ink }}>
+              <b>หุ้น:</b> {ticker}<br/>
+              <b>จำนวน:</b> {fmt(qty)} หุ้น<br/>
+              <b>ราคา:</b> {execPrice.toFixed(2)} THB<br/>
+              <b>มูลค่ารวม:</b> {fmt(total)} THB<br/>
+              <b>Order ID:</b> KTX-{Date.now().toString(36).toUpperCase()}
+            </div>
+          </Card>
+          <div style={{ marginTop: 14, fontSize: 11, color: T.sub }}>
+            ⚠️ นี่คือ Demo — ไม่ได้ทำรายการจริง
+          </div>
+          <button onClick={onBack} style={{
+            marginTop: 20, padding: "12px 0", width: "100%", background: T.blue, color: "#fff",
+            border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+          }}>← กลับหน้า Investment</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-container">
+      <Header title={`ซื้อ ${ticker}`} onBack={onBack} />
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: T.navy }}>{ticker}</div>
+              <div style={{ fontSize: 12, color: T.sub }}>SET / Thailand</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: T.navy }}>{mockPrice.toFixed(2)}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: changeNum >= 0 ? T.good : T.bad }}>
+                {changeNum >= 0 ? "▲" : "▼"} {mockData.change}%
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            {[["Open", mockData.open], ["High", mockData.high], ["Low", mockData.low],
+              ["Volume", mockData.volume], ["P/E", mockData.pe], ["Change", `${mockData.change}%`]
+            ].map(([k, v]) => (
+              <div key={k} style={{ background: T.bg, borderRadius: 8, padding: "8px 6px", textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: T.sub }}>{k}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card style={{ background: "#EAF9F0", border: `1px solid ${T.good}` }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.good, marginBottom: 6 }}>📊 KAsset Research Report</div>
+          <div style={{ fontSize: 13, color: T.ink, lineHeight: 1.8 }}>
+            Rating: <b style={{ color: T.good }}>{mockData.rating}</b><br/>
+            Target Price: <b>{mockData.target} THB</b><br/>
+            Optimal Entry: <b>{(mockPrice * 0.97).toFixed(0)} THB</b>
+          </div>
         </Card>
 
         <Card>
-          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>🤖 AI Investment Assistant</div>
-          <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.7, marginBottom: 12 }}>
-            📊 สัดส่วนแนะนำ:<br/>
-            • 60% Stocks<br/>
-            • 30% Bonds<br/>
-            • 10% Alternatives
-          </div>
-          <button onClick={() => setShowChat(!showChat)} style={{
-            width: "100%", padding: "10px", background: T.blue, color: "#fff", border: "none",
-            borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-          }}>
-            💬 Ask AI Assistant
-          </button>
-          {showChat && (
-            <div style={{ marginTop: 12, padding: 12, background: T.bg, borderRadius: 8 }}>
-              <div style={{ fontSize: 12, color: T.ink, marginBottom: 8 }}>
-                💡 ตามประวัติของคุณ แนะนำให้เริ่ม DCA Monthly ตั้งแต่ตอนนี้
-              </div>
-              <a href="https://ktx.or.th/open-account" target="_blank" rel="noopener noreferrer" style={{
-                display: "block", textAlign: "center", padding: "8px", background: T.blue, color: "#fff",
-                borderRadius: 6, textDecoration: "none", fontWeight: 700, fontSize: 13,
-              }}>
-                เปิดบัญชีที่ KTX →
-              </a>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10 }}>🛒 Place Order</div>
+          <Field label="Order Type">
+            <div style={{ display: "flex", gap: 8 }}>
+              <Chip active={orderType === "market"} onClick={() => setOrderType("market")}>Market</Chip>
+              <Chip active={orderType === "limit"} onClick={() => setOrderType("limit")}>Limit</Chip>
             </div>
+          </Field>
+          {orderType === "limit" && (
+            <Field label="Limit Price (THB)">
+              <input style={inputStyle} type="number" value={limitPrice} step="0.25"
+                onChange={(e) => setLimitPrice(+e.target.value || 0)} />
+            </Field>
           )}
+          <Field label="จำนวนหุ้น">
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {[50, 100, 500, 1000].map((q) => (
+                <Chip key={q} active={qty === q} onClick={() => setQty(q)}>{q}</Chip>
+              ))}
+            </div>
+          </Field>
+          <div style={{ background: T.bg, borderRadius: 10, padding: 12, marginTop: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+              <span>ราคาต่อหุ้น</span>
+              <b>{execPrice.toFixed(2)} THB</b>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 700, color: T.navy }}>
+              <span>มูลค่ารวม</span>
+              <b>{fmt(total)} THB</b>
+            </div>
+          </div>
+          <button onClick={() => setConfirmed(true)} style={{
+            marginTop: 12, width: "100%", padding: 13, background: T.good, color: "#fff",
+            border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+          }}>
+            ยืนยันคำสั่งซื้อ
+          </button>
+          <div style={{ marginTop: 8, fontSize: 11, color: T.sub, textAlign: "center" }}>
+            ⚠️ Demo Mode — ไม่ได้ทำรายการจริง
+          </div>
         </Card>
       </div>
     </div>
   );
 }
+
 
 // ===== INSURANCE PAGE =====
 function InsurancePage({ answers, onBack }) {
@@ -1196,6 +1538,7 @@ function Dashboard({ answers, go, onEdit }) {
 function App() {
   const [unlocked, setUnlocked] = useState(false);
   const [page, setPage] = useState('feature');
+  const [stockBuyInfo, setStockBuyInfo] = useState({ ticker: null, price: null });
   const [answers, setAnswers] = useState({
     occupation: null, income: 0, incomeType: null, maritalStatus: null, dependents: 0, ssfRmfAmount: 0, lifeInsurancePremium: 0, charitableDonation: 0,
     savings: 0, efStatus: null, investStatus: null, investFreq: null, investTypes: [], stockSectorsTH: [], stockSectorsINT: [], bondTypes: [], industries: [], insurance: [],
@@ -1217,7 +1560,8 @@ function App() {
       {page === 'tax' && <TaxPlanningPage answers={answers} onBack={() => setPage('dashboard')} />}
       {page === 'spending' && <DailySpendingPage answers={answers} onBack={() => setPage('dashboard')} />}
       {page === 'goals' && <SavingGoalsPage answers={answers} onBack={() => setPage('dashboard')} />}
-      {page === 'invest' && <InvestmentPage answers={answers} onBack={() => setPage('dashboard')} />}
+      {page === 'invest' && <InvestmentPage answers={answers} onBack={() => setPage('dashboard')} onBuyStock={(ticker, price) => { setStockBuyInfo({ticker, price}); setPage('stockbuy'); }} />}
+      {page === 'stockbuy' && <StockBuyPage ticker={stockBuyInfo.ticker} price={stockBuyInfo.price} answers={answers} onBack={() => setPage('invest')} />}
       {page === 'insurance' && <InsurancePage answers={answers} onBack={() => setPage('dashboard')} />}
     </div>
   );
