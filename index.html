@@ -841,7 +841,19 @@ function SavingGoalsPage({ answers, onBack }) {
   );
 }
 
-// ===== INVESTMENT PAGE (AI-Powered via Gemini) =====
+// ===== INVESTMENT PAGE (AI-Powered — Gemini Direct) =====
+const GEMINI_API_KEY = "REPLACE_YOUR_KEY_HERE";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY;
+
+async function callGemini({ systemInstruction, contents, temperature, maxOutputTokens }) {
+  const body = { contents, generationConfig: { temperature: temperature || 0.7, maxOutputTokens: maxOutputTokens || 1024 } };
+  if (systemInstruction) body.systemInstruction = { parts: [{ text: systemInstruction }] };
+  const resp = await fetch(GEMINI_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.error?.message || "Gemini API error");
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+}
+
 function InvestmentPage({ answers, onBack, onBuyStock }) {
   const [tab, setTab] = React.useState("news");
   const [newsItems, setNewsItems] = React.useState(null);
@@ -851,19 +863,6 @@ function InvestmentPage({ answers, onBack, onBuyStock }) {
   const [chatLoading, setChatLoading] = React.useState(false);
   const [initialized, setInitialized] = React.useState(false);
 
-  // Gemini proxy helper
-  async function callGemini({ systemInstruction, contents, temperature, maxOutputTokens }) {
-    const resp = await fetch("/.netlify/functions/gemini-proxy", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ systemInstruction, contents, temperature: temperature || 0.7, maxOutputTokens: maxOutputTokens || 1024 }),
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || "API error");
-    return data.text || "";
-  }
-
-  // Build user profile context
   const profileCtx = React.useMemo(() => {
     const A = analyze(answers);
     const inds = (answers.industries || []).join(", ") || "None selected";
@@ -883,40 +882,25 @@ function InvestmentPage({ answers, onBack, onBuyStock }) {
 - Overall Financial Health: ${A.overall}/100`;
   }, [answers]);
 
-  // Generate news on mount
-  React.useEffect(() => {
-    if (!initialized) { setInitialized(true); generateNews(); }
-  }, []);
+  React.useEffect(() => { if (!initialized) { setInitialized(true); generateNews(); } }, []);
 
   async function generateNews() {
     setNewsLoading(true);
     try {
       const text = await callGemini({
         systemInstruction: "You are a financial news curator for a Thai banking app. Always return ONLY a valid JSON array. No markdown, no backticks, no explanation.",
-        contents: [{ role: "user", parts: [{ text: `${profileCtx}
-
-Based on this investor's profile, generate 5 personalized investment news/insight articles relevant to their interests, selected industries, sectors, and risk level. Return ONLY a valid JSON array:
-[{"title":"...English title...","summary":"...one line Thai summary...","category":"...industry or sector tag...","sentiment":"positive|negative|neutral","ticker":"...relevant stock ticker or null..."}]
-
-Rules:
-- Match their selected industries and sectors closely
-- If they picked FinTech, show FinTech news; if Healthcare, show Healthcare news
-- Include a mix of Thai (SET) and international stocks
-- Make titles specific and realistic
-- Summaries in Thai, 1-2 sentences` }] }],
-        temperature: 0.8,
-        maxOutputTokens: 800,
+        contents: [{ role: "user", parts: [{ text: `${profileCtx}\n\nBased on this investor's profile, generate 5 personalized investment news/insight articles relevant to their interests, selected industries, sectors, and risk level. Return ONLY a valid JSON array:\n[{"title":"...English title...","summary":"...one line Thai summary...","category":"...industry or sector tag...","sentiment":"positive|negative|neutral","ticker":"...relevant stock ticker or null..."}]\n\nRules:\n- Match their selected industries and sectors closely\n- If they picked FinTech, show FinTech news; if Healthcare, show Healthcare news\n- Include a mix of Thai (SET) and international stocks\n- Make titles specific and realistic\n- Summaries in Thai, 1-2 sentences` }] }],
+        temperature: 0.8, maxOutputTokens: 800,
       });
       const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
       setNewsItems(parsed);
     } catch (e) {
       console.error("News error:", e);
-      setNewsItems([{ title: "Unable to load AI news", summary: "กรุณาลองใหม่อีกครั้ง — " + e.message, category: "System", sentiment: "neutral", ticker: null }]);
+      setNewsItems([{ title: "Unable to load AI news", summary: "กรุณาลองใหม่ — " + e.message, category: "System", sentiment: "neutral", ticker: null }]);
     }
     setNewsLoading(false);
   }
 
-  // AI Chat system prompt
   const systemPrompt = `You are Krungthai Investment AI Assistant — an expert financial advisor in the Krungthai NEXT banking app.
 
 ${profileCtx}
@@ -963,7 +947,6 @@ CAPABILITIES & RULES:
     setChatLoading(false);
   }
 
-  // Parse [[BUY:TICKER:PRICE]] from AI response
   function renderAIMessage(text) {
     const buyMatches = [...text.matchAll(/\[\[BUY:([A-Z0-9.]+):([0-9.]+)\]\]/g)];
     const clean = text.replace(/\[\[BUY:[A-Z0-9.]+:[0-9.]+\]\]/g, "").trim();
@@ -980,9 +963,7 @@ CAPABILITIES & RULES:
           <button key={i} onClick={() => onBuyStock && onBuyStock(m[1], parseFloat(m[2]))} style={{
             marginTop: 10, width: "100%", padding: 10, background: T.good, color: "#fff",
             border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-          }}>
-            🛒 ซื้อ {m[1]} ที่ {fmt(parseFloat(m[2]))} THB →
-          </button>
+          }}>🛒 ซื้อ {m[1]} ที่ {fmt(parseFloat(m[2]))} THB →</button>
         ))}
       </div>
     );
@@ -1005,12 +986,10 @@ CAPABILITIES & RULES:
               📊 News คัดสรรโดย AI ตาม Industries, Sectors และ Risk ที่คุณเลือกไว้
             </div>
             {newsLoading ? (
-              <Card>
-                <div style={{ textAlign: "center", padding: 30, color: T.sub }}>
-                  <div style={{ fontSize: 24, marginBottom: 8 }}>🔄</div>
-                  <div style={{ fontSize: 13 }}>AI กำลังวิเคราะห์ profile และคัดสรรข่าวให้คุณ...</div>
-                </div>
-              </Card>
+              <Card><div style={{ textAlign: "center", padding: 30, color: T.sub }}>
+                <div style={{ fontSize: 24, marginBottom: 8 }}>🔄</div>
+                <div style={{ fontSize: 13 }}>AI กำลังวิเคราะห์ profile และคัดสรรข่าวให้คุณ...</div>
+              </div></Card>
             ) : newsItems && newsItems.map((n, i) => (
               <Card key={i}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
@@ -1067,16 +1046,13 @@ CAPABILITIES & RULES:
                   alignSelf: m.role === "user" ? "flex-end" : "flex-start",
                   maxWidth: "85%", padding: "10px 14px", borderRadius: 14,
                   background: m.role === "user" ? T.blue : "#F0F0F0",
-                  color: m.role === "user" ? "#fff" : T.ink,
-                  fontSize: 13, lineHeight: 1.7,
+                  color: m.role === "user" ? "#fff" : T.ink, fontSize: 13, lineHeight: 1.7,
                 }}>
                   {m.role === "assistant" ? renderAIMessage(m.content) : m.content}
                 </div>
               ))}
               {chatLoading && (
-                <div style={{ alignSelf: "flex-start", padding: "10px 14px", borderRadius: 14, background: "#F0F0F0", fontSize: 13, color: T.sub }}>
-                  ⏳ AI กำลังวิเคราะห์...
-                </div>
+                <div style={{ alignSelf: "flex-start", padding: "10px 14px", borderRadius: 14, background: "#F0F0F0", fontSize: 13, color: T.sub }}>⏳ AI กำลังวิเคราะห์...</div>
               )}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
