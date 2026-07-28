@@ -683,7 +683,7 @@ function TaxPlanningPage({ answers, onBack }) {
                 <div style={{ fontSize: 12, color: T.sub }}>ลดหย่อน {fmt(p.tax)} บาท</div>
               </div>
               <a href={p.link} target="_blank" rel="noopener noreferrer" style={{ background: T.blue, color: "#fff", padding: "6px 12px", borderRadius: 6, textDecoration: "none", fontSize: 12, fontWeight: 700 }}>
-                ซื้อ KTX →
+                ดูข้อมูลเพิ่มเติม →
               </a>
             </div>
           ))}
@@ -867,7 +867,7 @@ function InvestmentPage({ answers, onBack, onBuyStock }) {
     setNewsLoading(true);
     try {
       const text = await callGemini({
-        systemInstruction: "You are a financial news curator for a Thai banking app. Always return ONLY a valid JSON array. No markdown, no backticks, no explanation.",
+        systemInstruction: "You are an educational financial news curator for a demo/prototype app. Summarize market news objectively without giving buy/sell recommendations. Always return ONLY a valid JSON array. No markdown, no backticks, no explanation.",
         contents: [{ role: "user", parts: [{ text: `${profileCtx}\n\nBased on this investor's profile, generate 5 personalized investment news/insight articles relevant to their interests, selected industries, sectors, and risk level. Return ONLY a valid JSON array:\n[{"title":"...English title...","summary":"...one line Thai summary...","category":"...industry or sector tag...","sentiment":"positive|negative|neutral","ticker":"...relevant stock ticker or null..."}]\n\nRules:\n- Match their selected industries and sectors closely\n- If they picked FinTech, show FinTech news; if Healthcare, show Healthcare news\n- Include a mix of Thai (SET) and international stocks\n- Make titles specific and realistic\n- Summaries in Thai, 1-2 sentences` }] }],
         temperature: 0.8, maxOutputTokens: 800,
       });
@@ -880,32 +880,28 @@ function InvestmentPage({ answers, onBack, onBuyStock }) {
     setNewsLoading(false);
   }
 
-  const systemPrompt = `You are Krungthai Investment AI Assistant — an expert financial advisor in the Krungthai NEXT banking app.
+  const systemPrompt = `You are an Investment Research Assistant (Demo/Prototype) — an educational tool that helps users learn about investing by summarizing publicly available market information.
 
 ${profileCtx}
 
-CAPABILITIES & RULES:
-1. Deep knowledge of investment fundamentals: asset allocation, diversification, risk management, DCA, value investing, growth investing, technical analysis, fundamental analysis.
-2. You have access to KAsset Research Reports (mock data) and can provide:
-   - Stock recommendations with target price ranges
-   - Buy/Sell/Hold ratings with conviction levels
-   - Optimal entry prices based on technical + fundamental analysis
-   - Sector outlook and market commentary
-3. When recommending stocks, ALWAYS format as:
+CRITICAL COMPLIANCE RULES — FOLLOW STRICTLY:
+1. You are NOT a licensed investment advisor. You do NOT give investment advice.
+2. NEVER use the words: "แนะนำให้ซื้อ", "ควรซื้อ", "Buy", "Sell", "Hold", "Rating" as actionable advice.
+3. NEVER provide target prices, optimal entry prices, or price predictions.
+4. NEVER tell the user to buy or sell any specific security.
+5. Your role is ONLY to: summarize publicly available business information, explain financial concepts, describe what a company does, summarize general market sentiment from analysts (without endorsing it), and educate users about investment strategies.
+6. When discussing a stock, format as EDUCATIONAL SUMMARY:
    **[TICKER]** — [Company Name]
-   Rating: [Buy/Sell/Hold]
-   Current Price: [realistic mock price] THB
-   Target Price: [range] THB
-   Optimal Entry: [price] THB
-   Source: KAsset Research Report
+   ลักษณะธุรกิจ: [what the company does]
+   ข้อมูลตลาด: [general market data — P/E, sector, market cap range]
+   มุมมองนักวิเคราะห์โดยรวม: [summarize WITHOUT endorsing — "นักวิเคราะห์บางส่วนมอง...", "ตลาดมีมุมมองที่หลากหลาย..."]
+   ปัจจัยที่ควรศึกษาเพิ่มเติม: [risks and factors to research]
 
-4. Thai stocks: use SET tickers (KBANK, SCB, ADVANC, CPALL, PTT, BH, BDMS, DELTA, AOT, SCC, GULF, OR, TRUE, MINT, CPN, BBL, KTB, PTTGC)
-5. International: AAPL, MSFT, GOOGL, NVDA, AMZN, META, TSLA, etc.
-6. Match recommendations to the user's risk appetite and interested sectors.
-7. When user asks to buy a stock or you recommend buying, end your message with exactly: [[BUY:TICKER:PRICE]] (e.g. [[BUY:KBANK:142.50]]) — the app will render a buy button.
-8. Respond primarily in Thai, use English for financial terms.
-9. Keep responses concise and actionable.
-10. Always end with disclaimer: "⚠️ ข้อมูลนี้เป็นการวิเคราะห์เบื้องต้น ไม่ใช่คำแนะนำการลงทุน ควรศึกษาข้อมูลเพิ่มเติมก่อนตัดสินใจ"`;
+7. When users ask "ควรซื้อหุ้นอะไร" or similar, respond: "ในฐานะผู้ช่วยให้ข้อมูล ไม่สามารถแนะนำให้ซื้อหรือขายหลักทรัพย์ใดได้ แต่สามารถช่วยสรุปข้อมูลบริษัทที่คุณสนใจได้ครับ"
+8. If the user wants to view more information about a stock, end with: [[INFO:TICKER]] so the app can show a research page.
+9. Respond primarily in Thai, use English for financial terms.
+10. Always end with: "⚠️ ข้อมูลนี้เป็นการสรุปเพื่อการศึกษาเท่านั้น ไม่ใช่คำแนะนำการลงทุน ผู้ลงทุนควรศึกษาข้อมูลเพิ่มเติมและปรึกษาผู้เชี่ยวชาญที่ได้รับใบอนุญาตก่อนตัดสินใจลงทุน"
+11. This is a Demo/Prototype application for educational purposes only. Do NOT reference any real financial institution as the operator of this system.`;
 
   async function sendChat(userMsg) {
     if (!userMsg.trim()) return;
@@ -927,8 +923,8 @@ CAPABILITIES & RULES:
   }
 
   function renderAIMessage(text) {
-    const buyMatches = [...text.matchAll(/\[\[BUY:([A-Z0-9.]+):([0-9.]+)\]\]/g)];
-    const clean = text.replace(/\[\[BUY:[A-Z0-9.]+:[0-9.]+\]\]/g, "").trim();
+    const infoMatches = [...text.matchAll(/\[\[INFO:([A-Z0-9.]+)\]\]/g)];
+    const clean = text.replace(/\[\[INFO:[A-Z0-9.]+\]\]/g, "").trim();
     const lines = clean.split("\n");
     return (
       <div>
@@ -938,11 +934,11 @@ CAPABILITIES & RULES:
           }
           return <div key={i} style={{ fontSize: 13, lineHeight: 1.7, color: T.ink }}>{line}</div>;
         })}
-        {buyMatches.map((m, i) => (
-          <button key={i} onClick={() => onBuyStock && onBuyStock(m[1], parseFloat(m[2]))} style={{
-            marginTop: 10, width: "100%", padding: 10, background: T.good, color: "#fff",
+        {infoMatches.map((m, i) => (
+          <button key={i} onClick={() => onBuyStock && onBuyStock(m[1], null)} style={{
+            marginTop: 10, width: "100%", padding: 10, background: T.blue, color: "#fff",
             border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-          }}>🛒 ซื้อ {m[1]} ที่ {fmt(parseFloat(m[2]))} THB →</button>
+          }}>📊 ดูข้อมูล {m[1]} เพิ่มเติม →</button>
         ))}
       </div>
     );
@@ -986,7 +982,7 @@ CAPABILITIES & RULES:
                     <button onClick={() => onBuyStock && onBuyStock(n.ticker, null)} style={{
                       background: T.blue, color: "#fff", padding: "6px 10px", borderRadius: 6,
                       border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-                    }}>ซื้อ {n.ticker} →</button>
+                    }}>ดูข้อมูล {n.ticker} →</button>
                   )}
                 </div>
               </Card>
@@ -1002,16 +998,16 @@ CAPABILITIES & RULES:
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <Card style={{ background: "#F0F8FF" }}>
               <div style={{ fontSize: 13, color: T.navy, lineHeight: 1.7 }}>
-                🤖 <b>Krungthai Investment AI</b> <span style={{ fontSize: 10, color: T.sub }}>Powered by Gemini</span><br/>
-                ถามได้ทุกเรื่อง: แนะนำหุ้น, วิเคราะห์พอร์ต, DCA strategy, ราคาเป้าหมาย<br/>
-                <span style={{ fontSize: 11, color: T.sub }}>ข้อมูลอ้างอิงจาก KAsset Research Reports</span>
+                🤖 <b>Investment Research Assistant</b> <span style={{ fontSize: 10, color: T.sub }}>Demo / Prototype</span><br/>
+                สรุปข้อมูลบริษัท, อธิบายแนวคิดการลงทุน, DCA strategy, วิเคราะห์อุตสาหกรรม<br/>
+                <span style={{ fontSize: 11, color: T.sub }}>ข้อมูลเพื่อการศึกษาเท่านั้น ไม่ใช่คำแนะนำการลงทุน</span>
               </div>
             </Card>
             <div style={{ minHeight: 200, maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
               {chatMessages.length === 0 && (
                 <div style={{ textAlign: "center", padding: 20, color: T.sub, fontSize: 13 }}>
                   <div style={{ marginBottom: 12 }}>💬 ลองถามเช่น:</div>
-                  {["แนะนำหุ้นไทยที่น่าสนใจ", "ควรลงทุนอะไรตอนนี้", "วิเคราะห์ KBANK ให้หน่อย", "อยากเริ่ม DCA ควรทำยังไง"].map((q) => (
+                  {["สรุปข้อมูลหุ้น KBANK ให้หน่อย", "อธิบาย DCA คืออะไร", "หุ้นกลุ่ม FinTech มีอะไรบ้าง", "ความเสี่ยงของการลงทุนในหุ้นมีอะไรบ้าง"].map((q) => (
                     <button key={q} onClick={() => sendChat(q)} style={{
                       display: "block", width: "100%", padding: "8px 12px", marginBottom: 6,
                       background: "#fff", border: `1px solid ${T.line}`, borderRadius: 8,
@@ -1052,17 +1048,9 @@ CAPABILITIES & RULES:
 }
 
 
-// ===== STOCK BUY PAGE (Mock) =====
-function StockBuyPage({ ticker, price, answers, onBack }) {
-  const [qty, setQty] = React.useState(100);
-  const [orderType, setOrderType] = React.useState("market");
-  const [limitPrice, setLimitPrice] = React.useState(price || 0);
-  const [confirmed, setConfirmed] = React.useState(false);
-
-  const mockPrice = price || (ticker === "KBANK" ? 142.5 : ticker === "SCB" ? 98.75 : ticker === "PTT" ? 34.25 : ticker === "ADVANC" ? 238.0 : ticker === "CPALL" ? 62.5 : ticker === "BH" ? 198.0 : ticker === "DELTA" ? 720.0 : ticker === "AOT" ? 68.5 : ticker === "NVDA" ? 135.2 : ticker === "AAPL" ? 198.5 : 100.0);
-  const execPrice = orderType === "market" ? mockPrice : limitPrice;
-  const total = qty * execPrice;
-
+// ===== STOCK INFO PAGE (Educational Research) =====
+function StockInfoPage({ ticker, answers, onBack }) {
+  const mockPrice = ticker === "KBANK" ? 142.5 : ticker === "SCB" ? 98.75 : ticker === "PTT" ? 34.25 : ticker === "ADVANC" ? 238.0 : ticker === "CPALL" ? 62.5 : ticker === "BH" ? 198.0 : ticker === "DELTA" ? 720.0 : ticker === "AOT" ? 68.5 : ticker === "NVDA" ? 135.2 : ticker === "AAPL" ? 198.5 : 100.0;
   const mockData = {
     open: (mockPrice * 0.99).toFixed(2),
     high: (mockPrice * 1.02).toFixed(2),
@@ -1070,49 +1058,18 @@ function StockBuyPage({ ticker, price, answers, onBack }) {
     change: ((Math.random() - 0.4) * 4).toFixed(2),
     volume: fmt(Math.round(Math.random() * 50000000)),
     pe: (8 + Math.random() * 20).toFixed(1),
-    target: `${(mockPrice * 1.08).toFixed(0)} — ${(mockPrice * 1.18).toFixed(0)}`,
-    rating: "Buy",
   };
   const changeNum = parseFloat(mockData.change);
 
-  if (confirmed) {
-    return (
-      <div className="app-container">
-        <Header title="Order Confirmed" />
-        <div style={{ padding: 20, textAlign: "center" }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: T.navy, marginBottom: 8 }}>คำสั่งซื้อสำเร็จ</div>
-          <Card style={{ textAlign: "left", marginTop: 20 }}>
-            <div style={{ fontSize: 14, lineHeight: 2, color: T.ink }}>
-              <b>หุ้น:</b> {ticker}<br/>
-              <b>จำนวน:</b> {fmt(qty)} หุ้น<br/>
-              <b>ราคา:</b> {execPrice.toFixed(2)} THB<br/>
-              <b>มูลค่ารวม:</b> {fmt(total)} THB<br/>
-              <b>Order ID:</b> KTX-{Date.now().toString(36).toUpperCase()}
-            </div>
-          </Card>
-          <div style={{ marginTop: 14, fontSize: 11, color: T.sub }}>
-            ⚠️ นี่คือ Demo — ไม่ได้ทำรายการจริง
-          </div>
-          <button onClick={onBack} style={{
-            marginTop: 20, padding: "12px 0", width: "100%", background: T.blue, color: "#fff",
-            border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-          }}>← กลับหน้า Investment</button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="app-container">
-      <Header title={`ซื้อ ${ticker}`} onBack={onBack} />
+      <Header title={`ข้อมูล ${ticker}`} onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <div>
               <div style={{ fontSize: 20, fontWeight: 800, color: T.navy }}>{ticker}</div>
-              <div style={{ fontSize: 12, color: T.sub }}>SET / Thailand</div>
+              <div style={{ fontSize: 12, color: T.sub }}>ข้อมูลจำลองเพื่อการศึกษา</div>
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: T.navy }}>{mockPrice.toFixed(2)}</div>
@@ -1123,7 +1080,7 @@ function StockBuyPage({ ticker, price, answers, onBack }) {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
             {[["Open", mockData.open], ["High", mockData.high], ["Low", mockData.low],
-              ["Volume", mockData.volume], ["P/E", mockData.pe], ["Change", `${mockData.change}%`]
+              ["Volume", mockData.volume], ["P/E", mockData.pe], ["Change", mockData.change + "%"]
             ].map(([k, v]) => (
               <div key={k} style={{ background: T.bg, borderRadius: 8, padding: "8px 6px", textAlign: "center" }}>
                 <div style={{ fontSize: 10, color: T.sub }}>{k}</div>
@@ -1133,61 +1090,41 @@ function StockBuyPage({ ticker, price, answers, onBack }) {
           </div>
         </Card>
 
-        <Card style={{ background: "#EAF9F0", border: `1px solid ${T.good}` }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: T.good, marginBottom: 6 }}>📊 KAsset Research Report</div>
+        <Card style={{ background: "#F0F8FF" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.blueDark, marginBottom: 6 }}>📊 สรุปข้อมูลเชิงวิจัย</div>
           <div style={{ fontSize: 13, color: T.ink, lineHeight: 1.8 }}>
-            Rating: <b style={{ color: T.good }}>{mockData.rating}</b><br/>
-            Target Price: <b>{mockData.target} THB</b><br/>
-            Optimal Entry: <b>{(mockPrice * 0.97).toFixed(0)} THB</b>
+            ข้อมูลด้านบนเป็น <b>ข้อมูลจำลอง</b> เพื่อแสดงตัวอย่างเท่านั้น<br/>
+            ผู้ลงทุนควรตรวจสอบข้อมูลจริงจากแหล่งที่เชื่อถือได้ เช่น SET, Bloomberg, หรือบริษัทหลักทรัพย์ที่ได้รับใบอนุญาต
           </div>
         </Card>
 
         <Card>
-          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10 }}>🛒 Place Order</div>
-          <Field label="Order Type">
-            <div style={{ display: "flex", gap: 8 }}>
-              <Chip active={orderType === "market"} onClick={() => setOrderType("market")}>Market</Chip>
-              <Chip active={orderType === "limit"} onClick={() => setOrderType("limit")}>Limit</Chip>
-            </div>
-          </Field>
-          {orderType === "limit" && (
-            <Field label="Limit Price (THB)">
-              <input style={inputStyle} type="number" value={limitPrice} step="0.25"
-                onChange={(e) => setLimitPrice(+e.target.value || 0)} />
-            </Field>
-          )}
-          <Field label="จำนวนหุ้น">
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              {[50, 100, 500, 1000].map((q) => (
-                <Chip key={q} active={qty === q} onClick={() => setQty(q)}>{q}</Chip>
-              ))}
-            </div>
-          </Field>
-          <div style={{ background: T.bg, borderRadius: 10, padding: 12, marginTop: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
-              <span>ราคาต่อหุ้น</span>
-              <b>{execPrice.toFixed(2)} THB</b>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 700, color: T.navy }}>
-              <span>มูลค่ารวม</span>
-              <b>{fmt(total)} THB</b>
-            </div>
-          </div>
-          <button onClick={() => setConfirmed(true)} style={{
-            marginTop: 12, width: "100%", padding: 13, background: T.good, color: "#fff",
-            border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-          }}>
-            ยืนยันคำสั่งซื้อ
-          </button>
-          <div style={{ marginTop: 8, fontSize: 11, color: T.sub, textAlign: "center" }}>
-            ⚠️ Demo Mode — ไม่ได้ทำรายการจริง
-          </div>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10 }}>📚 แหล่งศึกษาเพิ่มเติม</div>
+          {[
+            { name: "SET — ข้อมูลหลักทรัพย์", url: "https://www.set.or.th" },
+            { name: "SEC — สำนักงาน ก.ล.ต.", url: "https://www.sec.or.th" },
+            { name: "ตลาดหลักทรัพย์ — ห้องเรียนนักลงทุน", url: "https://www.set.or.th/th/education" },
+          ].map((link) => (
+            <a key={link.name} href={link.url} target="_blank" rel="noopener noreferrer" style={{
+              display: "block", padding: 10, background: T.bg, borderRadius: 8, marginBottom: 6,
+              textDecoration: "none", fontSize: 13, color: T.blueDark, fontWeight: 600,
+            }}>🔗 {link.name}</a>
+          ))}
         </Card>
+
+        <div style={{ fontSize: 11, color: T.sub, textAlign: "center", padding: 10, lineHeight: 1.6 }}>
+          ⚠️ ข้อมูลนี้เป็นเพียงตัวอย่างจำลอง (Demo) เพื่อการศึกษาเท่านั้น ไม่ใช่คำแนะนำการลงทุน<br/>
+          ผู้ลงทุนควรศึกษาข้อมูลจริงและปรึกษาที่ปรึกษาการลงทุนที่ได้รับใบอนุญาตจาก ก.ล.ต.
+        </div>
+
+        <button onClick={onBack} style={{
+          padding: "12px 0", width: "100%", background: T.blue, color: "#fff",
+          border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+        }}>← กลับหน้า Investment</button>
       </div>
     </div>
   );
 }
-
 
 // ===== INSURANCE PAGE =====
 function InsurancePage({ answers, onBack }) {
@@ -1501,8 +1438,8 @@ function App() {
       {page === 'tax' && <TaxPlanningPage answers={answers} onBack={() => setPage('dashboard')} />}
       {page === 'spending' && <DailySpendingPage answers={answers} onBack={() => setPage('dashboard')} />}
       {page === 'goals' && <SavingGoalsPage answers={answers} onBack={() => setPage('dashboard')} />}
-      {page === 'invest' && <InvestmentPage answers={answers} onBack={() => setPage('dashboard')} onBuyStock={(ticker, price) => { setStockBuyInfo({ticker, price}); setPage('stockbuy'); }} />}
-      {page === 'stockbuy' && <StockBuyPage ticker={stockBuyInfo.ticker} price={stockBuyInfo.price} answers={answers} onBack={() => setPage('invest')} />}
+      {page === 'invest' && <InvestmentPage answers={answers} onBack={() => setPage('dashboard')} onBuyStock={(ticker, price) => { setStockBuyInfo({ticker, price}); setPage('stockinfo'); }} />}
+      {page === 'stockinfo' && <StockInfoPage ticker={stockBuyInfo.ticker} answers={answers} onBack={() => setPage('invest')} />}
       {page === 'insurance' && <InsurancePage answers={answers} onBack={() => setPage('dashboard')} />}
     </div>
   );
