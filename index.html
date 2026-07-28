@@ -1365,8 +1365,243 @@ function WealthAllocationPage({ answers, onNext, onBack }) {
   );
 }
 
+// ===== FINANCIAL TREE PAGE (Focus Plant Style) =====
+function FinancialTreePage({ answers, onBack, onRewards }) {
+  const A = analyze(answers);
+  const goalObjs = (answers.goals || []).map((gid) => GOALS.find((x) => x.id === gid)).filter(Boolean);
+
+  // Points calculation
+  const points = React.useMemo(() => {
+    let pts = 0;
+    if (A.efScore >= 70) pts += 200;
+    else if (A.efScore >= 40) pts += 80;
+    if (A.insScore >= 70) pts += 150;
+    else if (A.insScore >= 40) pts += 60;
+    if (A.spendScore >= 60) pts += 100;
+    if (A.invScore >= 60) pts += 150;
+    if (A.goalsScore >= 60) pts += 120;
+    if (A.taxScore >= 60) pts += 80;
+    pts += Math.floor((answers.income || 0) / 100);
+    return pts;
+  }, [answers]);
+
+  // Tree health based on overall score
+  const treeStage = A.overall >= 70 ? "flourishing" : A.overall >= 45 ? "growing" : "seedling";
+  const leafColor = treeStage === "flourishing" ? "#2D8A4E" : treeStage === "growing" ? "#5DAE5B" : "#A0C49D";
+  const trunkColor = "#8B6F47";
+
+  // Root health (EF + Insurance + Spending)
+  const rootScore = Math.round((A.efScore + A.insScore + A.spendScore) / 3);
+  // Trunk health (Investment + Tax = Wealth Building)
+  const trunkScore = Math.round((A.invScore + A.taxScore) / 2);
+  // Branch health (Goals)
+  const branchScore = A.goalsScore;
+
+  function ScoreBar({ label, score, color }) {
+    return (
+      <div style={{ marginBottom: 6 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
+          <span style={{ color: T.sub }}>{label}</span>
+          <b style={{ color: score >= 70 ? T.good : score >= 45 ? T.warn : T.bad }}>{score}/100</b>
+        </div>
+        <div style={{ height: 6, borderRadius: 3, background: T.line, overflow: "hidden" }}>
+          <div style={{ width: `${score}%`, height: "100%", borderRadius: 3, background: color, transition: "width .6s" }} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-container">
+      <Header title="Financial Tree" sub={`🌱 ${treeStage === "flourishing" ? "ต้นไม้เติบโตสมบูรณ์!" : treeStage === "growing" ? "กำลังเติบโต..." : "เพิ่งเริ่มปลูก"}`} onBack={onBack} />
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+
+        {/* TREE SVG */}
+        <Card style={{ padding: 0, overflow: "hidden", background: "linear-gradient(180deg, #E8F4FD 0%, #F5F0E8 100%)" }}>
+          <svg viewBox="0 0 320 380" style={{ width: "100%", display: "block" }}>
+            {/* Sky */}
+            <circle cx="260" cy="50" r="18" fill="#FFE066" opacity="0.7" />
+
+            {/* Roots */}
+            <g opacity={rootScore > 30 ? 1 : 0.4}>
+              <path d="M160 310 Q120 340 80 360" stroke="#7A5C3A" strokeWidth="4" fill="none" strokeLinecap="round" />
+              <path d="M160 310 Q140 350 130 370" stroke="#7A5C3A" strokeWidth="3" fill="none" strokeLinecap="round" />
+              <path d="M160 310 Q200 340 240 360" stroke="#7A5C3A" strokeWidth="4" fill="none" strokeLinecap="round" />
+              <path d="M160 310 Q180 350 190 370" stroke="#7A5C3A" strokeWidth="3" fill="none" strokeLinecap="round" />
+            </g>
+            {/* Root labels */}
+            <text x="55" y="375" fontSize="8" fill="#7A5C3A" fontWeight="600">Emergency Fund</text>
+            <text x="130" y="378" fontSize="8" fill="#7A5C3A" fontWeight="600">Insurance</text>
+            <text x="200" y="375" fontSize="8" fill="#7A5C3A" fontWeight="600">Daily Spending</text>
+
+            {/* Ground */}
+            <ellipse cx="160" cy="315" rx="120" ry="12" fill="#C4A97D" opacity="0.5" />
+
+            {/* Trunk */}
+            <rect x="148" y="180" width="24" height="135" rx="6" fill={trunkColor} opacity={trunkScore > 30 ? 1 : 0.5} />
+            <rect x="152" y="190" width="4" height="120" rx="2" fill="#A0845C" opacity="0.4" />
+            <text x="115" y="265" fontSize="9" fill={trunkColor} fontWeight="700" opacity="0.8">Wealth Building</text>
+
+            {/* Branches + Leaves (canopy) */}
+            <g opacity={branchScore > 20 ? 1 : 0.4}>
+              {/* Main canopy */}
+              <ellipse cx="160" cy="130" rx={treeStage === "flourishing" ? 95 : treeStage === "growing" ? 75 : 50} ry={treeStage === "flourishing" ? 80 : treeStage === "growing" ? 60 : 40} fill={leafColor} opacity="0.85" />
+              <ellipse cx="120" cy="110" rx={treeStage === "flourishing" ? 55 : 35} ry={treeStage === "flourishing" ? 50 : 30} fill={leafColor} opacity="0.7" />
+              <ellipse cx="200" cy="115" rx={treeStage === "flourishing" ? 50 : 30} ry={treeStage === "flourishing" ? 45 : 28} fill={leafColor} opacity="0.7" />
+              {treeStage === "flourishing" && <ellipse cx="160" cy="75" rx="40" ry="35" fill="#228B22" opacity="0.5" />}
+            </g>
+
+            {/* Goal icons on branches */}
+            {goalObjs.slice(0, 6).map((g, i) => {
+              const angles = [-50, -20, 10, 40, -35, 25];
+              const radii = [65, 58, 58, 65, 45, 45];
+              const angle = (angles[i] || 0) * Math.PI / 180;
+              const r = radii[i] || 55;
+              const cx = 160 + r * Math.sin(angle);
+              const cy = 120 - r * Math.cos(angle);
+              return (
+                <g key={i}>
+                  <circle cx={cx} cy={cy} r="14" fill="white" opacity="0.9" />
+                  <text x={cx} y={cy + 5} fontSize="14" textAnchor="middle">{g.icon}</text>
+                </g>
+              );
+            })}
+
+            {/* Points badge */}
+            <g>
+              <rect x="220" y="20" width="85" height="30" rx="15" fill="#FFB800" />
+              <text x="262" y="40" fontSize="13" fill="white" textAnchor="middle" fontWeight="800">⭐ {fmt(points)} pts</text>
+            </g>
+          </svg>
+        </Card>
+
+        {/* TREE HEALTH BREAKDOWN */}
+        <Card>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 12 }}>🌳 สุขภาพต้นไม้การเงิน</div>
+          <ScoreBar label="🌿 ราก — Emergency Fund + Insurance + Spending" score={rootScore} color="#7A5C3A" />
+          <ScoreBar label="🪵 ลำต้น — Wealth Building (Investment + Tax)" score={trunkScore} color="#8B6F47" />
+          <ScoreBar label="🌸 กิ่ง — Financial Goals" score={branchScore} color={leafColor} />
+          <div style={{ marginTop: 8, background: T.bg, borderRadius: 8, padding: 10, fontSize: 12, color: T.ink, lineHeight: 1.7 }}>
+            {treeStage === "seedling" && "🌱 ต้นไม้เพิ่งเริ่มเติบโต — เริ่มสร้างรากฐาน (Emergency Fund) ให้แข็งแรงก่อน"}
+            {treeStage === "growing" && "🌿 ต้นไม้กำลังเติบโต — ลำต้นเริ่มแข็งแรง ขยายกิ่งก้านต่อได้"}
+            {treeStage === "flourishing" && "🌳 ต้นไม้เติบโตสมบูรณ์! — รากแข็งแรง ลำต้นมั่นคง กิ่งก้านเต็มเป้าหมาย"}
+          </div>
+        </Card>
+
+        {/* POINTS SUMMARY */}
+        <Card style={{ background: "linear-gradient(135deg, #FFF8E1, #FFF3CD)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontWeight: 700, color: T.navy }}>⭐ คะแนนสะสม</div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: "#FFB800" }}>{fmt(points)} pts</div>
+              <div style={{ fontSize: 11, color: T.sub }}>ใช้งาน 100 บาท = 1 point + โบนัสจากเป้าหมาย</div>
+            </div>
+            <button onClick={onRewards} style={{
+              background: "#FFB800", color: "#fff", border: "none", borderRadius: 10,
+              padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+            }}>แลกรางวัล →</button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ===== REWARDS PAGE =====
+function RewardsPage({ answers, onBack }) {
+  const A = analyze(answers);
+  let points = 0;
+  if (A.efScore >= 70) points += 200; else if (A.efScore >= 40) points += 80;
+  if (A.insScore >= 70) points += 150; else if (A.insScore >= 40) points += 60;
+  if (A.spendScore >= 60) points += 100;
+  if (A.invScore >= 60) points += 150;
+  if (A.goalsScore >= 60) points += 120;
+  if (A.taxScore >= 60) points += 80;
+  points += Math.floor((answers.income || 0) / 100);
+
+  const [redeemed, setRedeemed] = React.useState([]);
+
+  const lifestyleRewards = [
+    { id: "fit", name: "Fitness Discount", desc: "ส่วนลด 20% ค่าสมาชิก Fitness", pts: 200, icon: "💪" },
+    { id: "food", name: "Delivery App Discount", desc: "คูปอง ฿50 แอปเดลิเวอรี่", pts: 150, icon: "🍔" },
+    { id: "cafe", name: "Café Voucher", desc: "เครื่องดื่มฟรี 1 แก้ว", pts: 100, icon: "☕" },
+    { id: "concert", name: "Concert Ticket Discount", desc: "ส่วนลด 15% ตั๋วคอนเสิร์ต", pts: 500, icon: "🎵" },
+    { id: "ai", name: "AI Tools Credit", desc: "เครดิต AI Tools มูลค่า ฿200", pts: 300, icon: "🤖" },
+    { id: "cowork", name: "Co-Working Day Pass", desc: "ใช้งาน Co-Working Space 1 วัน", pts: 250, icon: "💻" },
+    { id: "travel", name: "Travel Discount", desc: "ส่วนลด 10% โรงแรม/ตั๋วเครื่องบิน", pts: 400, icon: "✈️" },
+  ];
+
+  const financialRewards = [
+    { id: "ins_disc", name: "ส่วนลดเบี้ยประกัน", desc: "ลด 5% เบี้ยประกันผลิตภัณฑ์ที่ร่วมรายการ", pts: 300, icon: "🛡️" },
+    { id: "cashback", name: "Cash Back", desc: "เงินคืน ฿100 เข้าบัญชี", pts: 250, icon: "💰" },
+    { id: "fund_disc", name: "ลดค่าธรรมเนียมกองทุน", desc: "ลดค่าธรรมเนียมซื้อกองทุน 50%", pts: 350, icon: "📈" },
+    { id: "event", name: "Wealth Events Access", desc: "สิทธิ์เข้าร่วม Investment Workshop", pts: 200, icon: "🎓" },
+    { id: "content", name: "Exclusive Financial Content", desc: "เข้าถึงบทวิเคราะห์พรีเมียม 30 วัน", pts: 150, icon: "📊" },
+  ];
+
+  const usedPts = redeemed.reduce((sum, r) => sum + (r.pts || 0), 0);
+  const remaining = points - usedPts;
+
+  function redeem(reward) {
+    if (remaining >= reward.pts && !redeemed.find((r) => r.id === reward.id)) {
+      setRedeemed([...redeemed, reward]);
+    }
+  }
+
+  function RewardCard({ r }) {
+    const isRedeemed = redeemed.find((x) => x.id === r.id);
+    const canAfford = remaining >= r.pts;
+    return (
+      <div style={{
+        display: "flex", gap: 10, alignItems: "center", padding: 12, background: isRedeemed ? "#EAF9F0" : "#fff",
+        borderRadius: 12, border: `1px solid ${isRedeemed ? T.good : T.line}`, marginBottom: 8,
+      }}>
+        <span style={{ fontSize: 28 }}>{r.icon}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: T.navy }}>{r.name}</div>
+          <div style={{ fontSize: 11, color: T.sub }}>{r.desc}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#FFB800", marginTop: 2 }}>⭐ {r.pts} pts</div>
+        </div>
+        {isRedeemed ? (
+          <span style={{ fontSize: 11, fontWeight: 700, color: T.good, padding: "4px 10px", background: "#E0F5E9", borderRadius: 8 }}>✅ แลกแล้ว</span>
+        ) : (
+          <button disabled={!canAfford} onClick={() => redeem(r)} style={{
+            padding: "6px 12px", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 700,
+            background: canAfford ? "#FFB800" : T.line, color: canAfford ? "#fff" : T.sub,
+            cursor: canAfford ? "pointer" : "not-allowed", fontFamily: "inherit",
+          }}>แลก</button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-container">
+      <Header title="Rewards" sub="แลกคะแนนเป็นสิทธิพิเศษ" onBack={onBack} />
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+
+        <Card style={{ background: "linear-gradient(135deg, #FFF8E1, #FFF3CD)", textAlign: "center" }}>
+          <div style={{ fontSize: 12, color: T.sub }}>คะแนนคงเหลือ</div>
+          <div style={{ fontSize: 36, fontWeight: 800, color: "#FFB800" }}>⭐ {fmt(remaining)}</div>
+          <div style={{ fontSize: 11, color: T.sub }}>จากทั้งหมด {fmt(points)} pts (ใช้ไป {fmt(usedPts)} pts)</div>
+        </Card>
+
+        <div>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10, fontSize: 15 }}>🛍️ Lifestyle Rewards</div>
+          {lifestyleRewards.map((r) => <RewardCard key={r.id} r={r} />)}
+        </div>
+
+        <div>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10, fontSize: 15 }}>💼 Financial Rewards</div>
+          {financialRewards.map((r) => <RewardCard key={r.id} r={r} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ===== DASHBOARD =====
-function Dashboard({ answers, go, onEdit }) {
+function Dashboard({ answers, go, onEdit, onTree, onRewards }) {
   const A = analyze(answers);
   const pillars = [
     { id: "emergency", en: "Emergency Fund", icon: "🛟", score: A.efScore },
@@ -1389,7 +1624,11 @@ function Dashboard({ answers, go, onEdit }) {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700 }}>Financial Health</div>
             <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>Focus: {weakest.map(w => w.en).join(" + ")}</div>
-            <button onClick={onEdit} style={{ marginTop: 6, background: "rgba(255,255,255,.18)", color: "#fff", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>✏️ Edit</button>
+            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+              <button onClick={onEdit} style={{ background: "rgba(255,255,255,.18)", color: "#fff", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>✏️ Edit</button>
+              <button onClick={onTree} style={{ background: "rgba(255,255,255,.18)", color: "#fff", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>🌳 Tree</button>
+              <button onClick={onRewards} style={{ background: "#FFB800", color: "#fff", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>⭐ Rewards</button>
+            </div>
           </div>
         </div>
       </Header>
@@ -1433,7 +1672,9 @@ function App() {
       {page === 'feature' && <FeaturePage onStart={() => setPage('onboarding')} />}
       {page === 'onboarding' && <Onboarding answers={answers} setAnswers={setAnswers} onDone={() => setPage('allocation')} />}
       {page === 'allocation' && <WealthAllocationPage answers={answers} onNext={() => setPage('dashboard')} onBack={() => setPage('onboarding')} />}
-      {page === 'dashboard' && <Dashboard answers={answers} go={setPage} onEdit={() => setPage('onboarding')} />}
+      {page === 'dashboard' && <Dashboard answers={answers} go={setPage} onEdit={() => setPage('onboarding')} onTree={() => setPage('tree')} onRewards={() => setPage('rewards')} />}
+      {page === 'tree' && <FinancialTreePage answers={answers} onBack={() => setPage('dashboard')} onRewards={() => setPage('rewards')} />}
+      {page === 'rewards' && <RewardsPage answers={answers} onBack={() => setPage('dashboard')} />}
       {page === 'emergency' && <EmergencyFundPage answers={answers} onBack={() => setPage('dashboard')} />}
       {page === 'tax' && <TaxPlanningPage answers={answers} onBack={() => setPage('dashboard')} />}
       {page === 'spending' && <DailySpendingPage answers={answers} onBack={() => setPage('dashboard')} />}
