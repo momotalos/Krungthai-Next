@@ -17,57 +17,7 @@
 <script type="text/babel" data-presets="react">
 const { useState } = React;
 
-// ===== PASSWORD PROTECTION =====
-function PasswordGate({ onUnlock }) {
-  const [pwd, setPwd] = useState("");
-  const correctPwd = "krungthai2024"; // เปลี่ยนเป็นรหัสผ่านที่ต้องการ
-  
-  return (
-    <div style={{
-      position: "fixed", inset: 0, background: "linear-gradient(135deg, #00A6E6, #0077B3)",
-      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999,
-    }}>
-      <div style={{
-        background: "white", borderRadius: 20, padding: 40, boxShadow: "0 20px 60px rgba(0,0,0,.2)",
-        maxWidth: 400, width: "90%", textAlign: "center",
-      }}>
-        <h2 style={{ fontSize: 28, fontWeight: 800, color: "#0B2A4A", marginBottom: 10 }}>🔐 Access Required</h2>
-        <p style={{ fontSize: 14, color: "#6B8299", marginBottom: 24 }}>Enter password to view 6 Financial Pillars</p>
-        
-        <input 
-          type="password"
-          value={pwd}
-          onChange={(e) => setPwd(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && pwd === correctPwd && onUnlock()}
-          placeholder="Enter password"
-          style={{
-            width: "100%", padding: "12px", fontSize: 16, borderRadius: 10,
-            border: "1.5px solid #DCEAF3", marginBottom: 16, fontFamily: "inherit",
-            boxSizing: "border-box",
-          }}
-        />
-        
-        <button 
-          onClick={() => pwd === correctPwd && onUnlock()}
-          disabled={pwd !== correctPwd}
-          style={{
-            width: "100%", padding: "12px", fontSize: 16, fontWeight: 700,
-            background: pwd === correctPwd ? "#00A6E6" : "#DCEAF3",
-            color: pwd === correctPwd ? "white" : "#6B8299",
-            border: "none", borderRadius: 10, cursor: pwd === correctPwd ? "pointer" : "not-allowed",
-            fontFamily: "inherit",
-          }}
-        >
-          Unlock
-        </button>
-        
-        {pwd && pwd !== correctPwd && (
-          <p style={{ marginTop: 12, fontSize: 12, color: "#E5484D" }}>❌ Password incorrect</p>
-        )}
-      </div>
-    </div>
-  );
-}
+
 
 const T = {
   blue: "#00A6E6", blueDark: "#0077B3", navy: "#0B2A4A",
@@ -842,18 +792,45 @@ function SavingGoalsPage({ answers, onBack }) {
 }
 
 // ===== INVESTMENT PAGE (AI-Powered — Gemini via Netlify Functions) =====
-// API key is stored in Netlify Environment Variables (GEMINI_API_KEY)
-// Frontend calls /.netlify/functions/gemini-proxy → proxy adds key → calls Gemini
+// Auto-fallback: if one model hits quota, tries the next model automatically.
+// Models ordered by free-tier quota: highest RPD & RPM first
+// Tier 1: 500 RPD / 15 RPM (best)
+// Tier 2: 20 RPD / 10 RPM
+// Tier 3: 20 RPD / 5 RPM
+const GEMINI_MODELS = [
+  "gemini-3.5-flash-lite",   // 15 RPM, 250K tokens, 500 RPD ★ best
+  "gemini-3.1-flash-lite",   // 15 RPM, 250K tokens, 500 RPD
+  "gemini-2.5-flash-lite",   // 10 RPM, 250K tokens, 20 RPD
+  "gemini-3.6-flash",        //  5 RPM, 250K tokens, 20 RPD (newest)
+  "gemini-3.5-flash",        //  5 RPM, 250K tokens, 20 RPD
+  "gemini-3-flash",          //  5 RPM, 250K tokens, 20 RPD
+  "gemini-2.5-flash",        //  5 RPM, 250K tokens, 20 RPD
+];
 
 async function callGemini({ systemInstruction, contents, temperature, maxOutputTokens }) {
-  const resp = await fetch("/.netlify/functions/gemini-proxy", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ systemInstruction, contents, temperature: temperature || 0.7, maxOutputTokens: maxOutputTokens || 1024 }),
-  });
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(data.error || "API error");
-  return data.text || "";
+  let lastError = "";
+  for (const model of GEMINI_MODELS) {
+    try {
+      const resp = await fetch("/.netlify/functions/gemini-proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model, systemInstruction, contents, temperature: temperature || 0.7, maxOutputTokens: maxOutputTokens || 1024 }),
+      });
+      const data = await resp.json();
+      if (resp.ok && data.text) return data.text;
+      // If quota error, try next model
+      const errMsg = data.error || "";
+      if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("rate") || errMsg.includes("limit") || errMsg.includes("exceeded") || resp.status === 429) {
+        lastError = model + " quota exceeded";
+        continue;
+      }
+      // Other errors — still try next model
+      lastError = errMsg || "Unknown error from " + model;
+    } catch (e) {
+      lastError = e.message;
+    }
+  }
+  throw new Error("ทุก model ถูกใช้เกิน quota แล้ว กรุณารอสักครู่แล้วลองใหม่ (" + lastError + ")");
 }
 
 function InvestmentPage({ answers, onBack, onBuyStock }) {
@@ -1503,7 +1480,6 @@ function Dashboard({ answers, go, onEdit }) {
 
 // ===== MAIN APP =====
 function App() {
-  const [unlocked, setUnlocked] = useState(false);
   const [page, setPage] = useState('feature');
   const [stockBuyInfo, setStockBuyInfo] = useState({ ticker: null, price: null });
   const [answers, setAnswers] = useState({
@@ -1514,8 +1490,6 @@ function App() {
     risk: null, wealthPref: null, lifestyle: [],
     expense: 0,
   });
-
-  if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
 
   return (
     <div style={{ background: T.bg, minHeight: "100vh" }}>

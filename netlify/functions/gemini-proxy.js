@@ -1,7 +1,3 @@
-// Netlify Function: Proxies requests to Gemini API
-// API key is stored as environment variable GEMINI_API_KEY in Netlify dashboard
-// The frontend never sees the key.
-
 exports.handler = async (event) => {
   const headers = {
     "Access-Control-Allow-Origin": "*",
@@ -10,24 +6,17 @@ exports.handler = async (event) => {
     "Content-Type": "application/json",
   };
 
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers, body: "" };
-  }
-
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
-  }
+  if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers, body: "" };
+  if (event.httpMethod !== "POST") return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
 
   const API_KEY = process.env.GEMINI_API_KEY;
   if (!API_KEY) {
-    return {
-      statusCode: 500, headers,
-      body: JSON.stringify({ error: "GEMINI_API_KEY not configured in Netlify environment variables" }),
-    };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: "GEMINI_API_KEY not set in Netlify Environment Variables" }) };
   }
 
   try {
     const body = JSON.parse(event.body);
+    // Frontend sends which model to try
     const model = body.model || "gemini-2.0-flash";
 
     const geminiBody = {
@@ -37,38 +26,31 @@ exports.handler = async (event) => {
         maxOutputTokens: body.maxOutputTokens || 1024,
       },
     };
-
     if (body.systemInstruction) {
       geminiBody.systemInstruction = { parts: [{ text: body.systemInstruction }] };
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
-
     const resp = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(geminiBody),
     });
-
     const data = await resp.json();
 
     if (!resp.ok) {
+      // Pass the error back so frontend can decide to retry with another model
       return {
         statusCode: resp.status, headers,
-        body: JSON.stringify({ error: data.error?.message || "Gemini API error", details: data }),
+        body: JSON.stringify({ error: data.error?.message || "Gemini API error", status: resp.status }),
       };
     }
 
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
     return {
       statusCode: 200, headers,
-      body: JSON.stringify({ text, raw: data }),
+      body: JSON.stringify({ text: data.candidates?.[0]?.content?.parts?.[0]?.text || "", model }),
     };
   } catch (err) {
-    return {
-      statusCode: 500, headers,
-      body: JSON.stringify({ error: err.message }),
-    };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
