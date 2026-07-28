@@ -1601,7 +1601,7 @@ function RewardsPage({ answers, onBack }) {
 }
 
 // ===== DASHBOARD =====
-function Dashboard({ answers, go, onEdit, onTree, onRewards }) {
+function Dashboard({ answers, go, onEdit, onRewards }) {
   const A = analyze(answers);
   const pillars = [
     { id: "emergency", en: "Emergency Fund", icon: "🛟", score: A.efScore },
@@ -1611,28 +1611,36 @@ function Dashboard({ answers, go, onEdit, onTree, onRewards }) {
     { id: "invest", en: "Investment", icon: "📈", score: A.invScore },
     { id: "insurance", en: "Insurance", icon: "🛡️", score: A.insScore },
   ];
-  const weakest = [...pillars].sort((x, y) => x.score - y.score).slice(0, 2);
+
+  const goalObjs = (answers.goals || []).map((gid) => GOALS.find((x) => x.id === gid)).filter(Boolean);
+
+  // Tree stage
+  const treeStage = A.overall >= 70 ? "flourishing" : A.overall >= 45 ? "growing" : "seedling";
+  const leafColor = treeStage === "flourishing" ? "#2D8A4E" : treeStage === "growing" ? "#5DAE5B" : "#A0C49D";
+  const rootScore = Math.round((A.efScore + A.insScore + A.spendScore) / 3);
+  const trunkScore = Math.round((A.invScore + A.taxScore) / 2);
+
+  // Points
+  let points = 0;
+  if (A.efScore >= 70) points += 200; else if (A.efScore >= 40) points += 80;
+  if (A.insScore >= 70) points += 150; else if (A.insScore >= 40) points += 60;
+  if (A.spendScore >= 60) points += 100;
+  if (A.invScore >= 60) points += 150;
+  if (A.goalsScore >= 60) points += 120;
+  if (A.taxScore >= 60) points += 80;
+  points += Math.floor((answers.income || 0) / 100);
 
   return (
     <div className="app-container">
       <Header title="6 Financial Pillars" sub={`${A.occ.label} · ${fmt(answers.income)} บาท/เดือน`}>
-        <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 16, background: "rgba(255,255,255,.14)", borderRadius: 16, padding: 14 }}>
-          <div style={{ position: "relative", width: 72, height: 72 }}>
-            <Ring score={A.overall} size={72} stroke={8} />
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800 }}>{A.overall}</div>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>Financial Health</div>
-            <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>Focus: {weakest.map(w => w.en).join(" + ")}</div>
-            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              <button onClick={onEdit} style={{ background: "rgba(255,255,255,.18)", color: "#fff", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>✏️ Edit</button>
-              <button onClick={onTree} style={{ background: "rgba(255,255,255,.18)", color: "#fff", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>🌳 Tree</button>
-              <button onClick={onRewards} style={{ background: "#FFB800", color: "#fff", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>⭐ Rewards</button>
-            </div>
-          </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+          <button onClick={onEdit} style={{ background: "rgba(255,255,255,.18)", color: "#fff", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>✏️ แก้ไข</button>
+          <button onClick={onRewards} style={{ background: "#FFB800", color: "#fff", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>⭐ {fmt(points)} pts</button>
         </div>
       </Header>
-      <div style={{ padding: 20 }}>
+
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* 6 Pillar Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
           {pillars.map((p) => (
             <Card key={p.id} onClick={() => go(p.id)} style={{ display: "flex", flexDirection: "column", gap: 8, cursor: "pointer" }}>
@@ -1643,12 +1651,139 @@ function Dashboard({ answers, go, onEdit, onTree, onRewards }) {
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>{p.score}</div>
                 </div>
               </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{p.en}</div>
-              </div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{p.en}</div>
             </Card>
           ))}
         </div>
+
+        {/* ===== FINANCIAL TREE (inline) ===== */}
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ background: "linear-gradient(180deg, #D4EDFC 0%, #FDFAF3 50%, #E8DCC8 100%)", padding: "0 0 10px", position: "relative" }}>
+            <svg viewBox="0 0 360 420" style={{ width: "100%", display: "block" }}>
+              {/* Sun & clouds */}
+              <circle cx="300" cy="42" r="22" fill="#FFE066" opacity="0.8" />
+              <ellipse cx="70" cy="35" rx="28" ry="10" fill="#fff" opacity="0.6" />
+              <ellipse cx="55" cy="32" rx="20" ry="8" fill="#fff" opacity="0.7" />
+
+              {/* ---- ROOTS ---- */}
+              <g opacity={rootScore > 25 ? 0.6 + rootScore * 0.004 : 0.3}>
+                {/* Main roots */}
+                <path d="M180 340 C150 355 115 365 70 380" stroke="#6B5335" strokeWidth="5" fill="none" strokeLinecap="round" />
+                <path d="M180 340 C155 360 140 375 120 395" stroke="#6B5335" strokeWidth="4" fill="none" strokeLinecap="round" />
+                <path d="M180 340 C210 355 245 365 290 380" stroke="#6B5335" strokeWidth="5" fill="none" strokeLinecap="round" />
+                <path d="M180 340 C205 360 220 375 240 395" stroke="#6B5335" strokeWidth="4" fill="none" strokeLinecap="round" />
+                {/* Thin roots */}
+                <path d="M180 340 C165 365 155 390 150 410" stroke="#6B5335" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                <path d="M180 340 C195 365 205 390 210 410" stroke="#6B5335" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+              </g>
+
+              {/* Root labels */}
+              <g fontSize="9" fill="#6B5335" fontWeight="700">
+                <text x="30" y="392">🛟 Emergency</text>
+                <text x="105" y="412">🛡️ Insurance</text>
+                <text x="225" y="412">💳 Spending</text>
+              </g>
+
+              {/* Ground */}
+              <ellipse cx="180" cy="345" rx="145" ry="14" fill="#B89B6A" opacity="0.35" />
+              <line x1="35" y1="345" x2="325" y2="345" stroke="#B89B6A" strokeWidth="1" opacity="0.3" />
+
+              {/* ---- TRUNK ---- */}
+              <g opacity={trunkScore > 25 ? 0.7 + trunkScore * 0.003 : 0.4}>
+                <path d="M170 340 Q168 280 166 220 Q164 195 172 180" fill="#8B6F47" stroke="#7A5C3A" strokeWidth="1" />
+                <path d="M190 340 Q192 280 194 220 Q196 195 188 180" fill="#8B6F47" stroke="#7A5C3A" strokeWidth="1" />
+                <path d="M170 340 L190 340 L188 180 L172 180 Z" fill="#8B6F47" />
+                {/* Bark texture */}
+                <line x1="178" y1="200" x2="178" y2="330" stroke="#7A5C3A" strokeWidth="1.5" opacity="0.3" />
+                <line x1="183" y1="210" x2="183" y2="325" stroke="#7A5C3A" strokeWidth="1" opacity="0.2" />
+              </g>
+              <text x="112" y="290" fontSize="9" fill="#7A5C3A" fontWeight="700" opacity="0.7">📈 Wealth Building</text>
+
+              {/* ---- BRANCHES (structural) ---- */}
+              <g stroke="#7A5C3A" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.7">
+                <path d="M175 220 Q140 200 110 175" />
+                <path d="M185 220 Q220 200 250 175" />
+                <path d="M172 195 Q145 170 120 140" />
+                <path d="M188 195 Q215 170 240 140" />
+                <path d="M180 185 Q180 160 180 130" />
+              </g>
+
+              {/* ---- CANOPY (leaves) ---- */}
+              <g>
+                {/* Layer 1: base */}
+                <ellipse cx="180" cy="130" rx={treeStage === "flourishing" ? 110 : treeStage === "growing" ? 85 : 55} ry={treeStage === "flourishing" ? 85 : treeStage === "growing" ? 65 : 42} fill={leafColor} opacity="0.75" />
+                {/* Layer 2: left cluster */}
+                <ellipse cx="130" cy="115" rx={treeStage === "flourishing" ? 60 : treeStage === "growing" ? 42 : 25} ry={treeStage === "flourishing" ? 55 : treeStage === "growing" ? 38 : 22} fill={leafColor} opacity="0.65" />
+                {/* Layer 3: right cluster */}
+                <ellipse cx="230" cy="120" rx={treeStage === "flourishing" ? 55 : treeStage === "growing" ? 38 : 22} ry={treeStage === "flourishing" ? 50 : treeStage === "growing" ? 35 : 20} fill={leafColor} opacity="0.65" />
+                {/* Layer 4: top highlight */}
+                {treeStage !== "seedling" && <ellipse cx="180" cy="85" rx={treeStage === "flourishing" ? 50 : 30} ry={treeStage === "flourishing" ? 40 : 22} fill="#228B22" opacity="0.4" />}
+                {/* Layer 5: flourishing extra */}
+                {treeStage === "flourishing" && <>
+                  <ellipse cx="110" cy="90" rx="30" ry="28" fill="#1E7A1E" opacity="0.35" />
+                  <ellipse cx="250" cy="95" rx="28" ry="25" fill="#1E7A1E" opacity="0.35" />
+                </>}
+              </g>
+
+              {/* ---- GOAL ICONS on canopy ---- */}
+              {goalObjs.slice(0, 6).map((g, idx) => {
+                const pos = [
+                  { x: 130, y: 85 }, { x: 230, y: 90 }, { x: 180, y: 65 },
+                  { x: 115, y: 130 }, { x: 245, y: 130 }, { x: 180, y: 110 },
+                ];
+                const p = pos[idx] || pos[0];
+                return (
+                  <g key={idx}>
+                    <circle cx={p.x} cy={p.y} r="16" fill="white" opacity="0.92" />
+                    <text x={p.x} y={p.y + 6} fontSize="16" textAnchor="middle">{g.icon}</text>
+                  </g>
+                );
+              })}
+              {goalObjs.length === 0 && (
+                <text x="180" y="130" fontSize="10" textAnchor="middle" fill="#fff" opacity="0.8">ยังไม่มีเป้าหมาย</text>
+              )}
+
+              {/* ---- OVERALL SCORE badge ---- */}
+              <g>
+                <circle cx="180" cy="170" r="22" fill="white" stroke={A.overall >= 70 ? T.good : A.overall >= 45 ? T.warn : T.bad} strokeWidth="3" />
+                <text x="180" y="176" fontSize="15" textAnchor="middle" fontWeight="800" fill={T.navy}>{A.overall}</text>
+              </g>
+
+              {/* Stage label */}
+              <rect x="125" y="5" width="110" height="22" rx="11" fill="rgba(255,255,255,0.85)" />
+              <text x="180" y="20" fontSize="11" textAnchor="middle" fontWeight="700" fill={T.navy}>
+                {treeStage === "flourishing" ? "🌳 สมบูรณ์!" : treeStage === "growing" ? "🌿 กำลังเติบโต" : "🌱 เริ่มปลูก"}
+              </text>
+            </svg>
+          </div>
+
+          {/* Tree legend */}
+          <div style={{ padding: "12px 16px", display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            {[
+              { emoji: "🌿", label: "ราก", desc: "EF + Insurance + Spending", score: rootScore },
+              { emoji: "🪵", label: "ลำต้น", desc: "Investment + Tax", score: trunkScore },
+              { emoji: "🌸", label: "กิ่ง", desc: "Goals", score: A.goalsScore },
+            ].map((s) => (
+              <div key={s.label} style={{ textAlign: "center", minWidth: 80 }}>
+                <div style={{ fontSize: 10, color: T.sub }}>{s.emoji} {s.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: s.score >= 70 ? T.good : s.score >= 45 ? T.warn : T.bad }}>{s.score}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Points bar */}
+        <Card style={{ background: "linear-gradient(135deg, #FFF8E1, #FFF3CD)" }} onClick={onRewards}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+            <div>
+              <div style={{ fontWeight: 700, color: T.navy, fontSize: 13 }}>⭐ คะแนนสะสม</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#FFB800" }}>{fmt(points)} pts</div>
+            </div>
+            <div style={{ background: "#FFB800", color: "#fff", padding: "8px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
+              แลกรางวัล →
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );
@@ -1672,8 +1807,7 @@ function App() {
       {page === 'feature' && <FeaturePage onStart={() => setPage('onboarding')} />}
       {page === 'onboarding' && <Onboarding answers={answers} setAnswers={setAnswers} onDone={() => setPage('allocation')} />}
       {page === 'allocation' && <WealthAllocationPage answers={answers} onNext={() => setPage('dashboard')} onBack={() => setPage('onboarding')} />}
-      {page === 'dashboard' && <Dashboard answers={answers} go={setPage} onEdit={() => setPage('onboarding')} onTree={() => setPage('tree')} onRewards={() => setPage('rewards')} />}
-      {page === 'tree' && <FinancialTreePage answers={answers} onBack={() => setPage('dashboard')} onRewards={() => setPage('rewards')} />}
+      {page === 'dashboard' && <Dashboard answers={answers} go={setPage} onEdit={() => setPage('onboarding')} onRewards={() => setPage('rewards')} />}
       {page === 'rewards' && <RewardsPage answers={answers} onBack={() => setPage('dashboard')} />}
       {page === 'emergency' && <EmergencyFundPage answers={answers} onBack={() => setPage('dashboard')} />}
       {page === 'tax' && <TaxPlanningPage answers={answers} onBack={() => setPage('dashboard')} />}
