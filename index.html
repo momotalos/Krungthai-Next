@@ -323,11 +323,15 @@ function Onboarding({ answers, setAnswers, onDone }) {
                 ))}
               </div>
             </Field>
-            <Field label="รายได้ต่อเดือน (บาท)">
+            <Field label={t("รายได้ต่อเดือน (บาท)","Monthly Income (THB)")}>
               <input style={inputStyle} type="number" value={a.income || ""} placeholder="30000"
                 onChange={(e) => set({ income: +e.target.value || 0 })} />
             </Field>
-            <Field label="ประเภทรายได้">
+            <Field label={t("ค่าใช้จ่ายต่อเดือน (บาท)","Monthly Expense (THB)")}>
+              <input style={inputStyle} type="number" value={a.expense || ""} placeholder="15000"
+                onChange={(e) => set({ expense: +e.target.value || 0 })} />
+            </Field>
+            <Field label={t("ประเภทรายได้","Income Type")}>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {INCOME_TYPES.map((t) => (
                   <Chip key={t} active={a.incomeType === t} onClick={() => set({ incomeType: t })}>{t}</Chip>
@@ -1654,10 +1658,6 @@ function TreeSVG({ answers, height }) {
       {goalObjs.length === 0 && (
         <text x="180" y="145" fontSize="11" textAnchor="middle" fill="#fff" fontWeight="700">{t("ยังไม่มีเป้าหมาย","No goals yet")}</text>
       )}
-
-      {/* Overall score badge on trunk */}
-      <circle cx="180" cy="230" r="24" fill="#fff" stroke={A.overall >= 70 ? T.good : A.overall >= 45 ? T.warn : T.bad} strokeWidth="4" />
-      <text x="180" y="237" fontSize="17" textAnchor="middle" fontWeight="800" fill={T.navy}>{A.overall}</text>
 
       {/* Little flowers on grass */}
       <g>
