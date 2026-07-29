@@ -710,7 +710,7 @@ function TaxPlanningPage({ answers, onBack, onBuyFund, onEducation }) {
                 <div style={{ fontSize: 12, color: T.sub }}>{t("ลดหย่อนได้สูงสุด","Max deduction")} {fmt(p.tax)} {baht()} · {t("ความเสี่ยง","Risk")} {p.risk}</div>
               </div>
               <button onClick={() => onBuyFund && onBuyFund(p)} style={{ background: T.blue, color: "#fff", padding: "6px 12px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                {t("ซื้อ KTX","Buy KTX")} →
+                {t("ซื้อ","Buy")} →
               </button>
             </div>
           ))}
