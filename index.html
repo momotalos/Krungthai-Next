@@ -26,6 +26,13 @@ const T = {
 };
 const fmt = (n) => (isNaN(n) || n === null ? "0" : Math.round(n).toLocaleString("th-TH"));
 
+// ===== LANGUAGE SYSTEM =====
+// Global helper synced at App render top. t("ไทย","English") returns by current lang.
+let LANG = "th";
+let SET_LANG = null;
+function t(th, en) { return LANG === "en" ? en : th; }
+const baht = () => t("บาท", "THB");
+
 // ===== CONSTANTS =====
 const OCCUPATIONS = [
   { id: "student", label: "Student", months: 3 },
@@ -141,13 +148,19 @@ function Header({ title, sub, onBack, children }) {
     <div style={{
       background: `linear-gradient(135deg, ${T.blue}, ${T.blueDark})`,
       padding: "20px 20px 26px", color: "#fff", borderRadius: "0 0 24px 24px",
+      position: "relative",
     }}>
+      <button onClick={() => SET_LANG && SET_LANG(LANG === "th" ? "en" : "th")} style={{
+        position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,.22)",
+        color: "#fff", border: "none", borderRadius: 20, padding: "5px 12px",
+        fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+      }}>🌐 {LANG === "th" ? "EN" : "ไทย"}</button>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         {onBack && (
           <button onClick={onBack} style={{
             background: "rgba(255,255,255,.18)", color: "#fff", border: "none",
             borderRadius: 10, padding: "6px 12px", fontSize: 14, cursor: "pointer", fontFamily: "inherit",
-          }}>← กลับ</button>
+          }}>← {t("กลับ","Back")}</button>
         )}
         <div>
           <div style={{ fontSize: 20, fontWeight: 700 }}>{title}</div>
@@ -196,14 +209,14 @@ function FeaturePage({ onStart }) {
     <div>
       <div className="feature-header">
         <h1>6 Financial Pillars</h1>
-        <p>วางแผนการเงิน บริหารหนี้ และพัฒนาความมั่นคงทางการเงิน</p>
-        <div className="feature-badge">✨ ฟีเจอร์ใหม่ใน Krungthai Next</div>
+        <p>{t("วางแผนการเงิน บริหารหนี้ และพัฒนาความมั่นคงทางการเงิน","Plan your finances, manage debt, and build financial security")}</p>
+        <div className="feature-badge">✨ {t("ฟีเจอร์ใหม่","New Feature")}</div>
       </div>
 
       <div className="feature-section">
         <div className="feature-container">
-          <h2>6 เสาหลักของความมั่นคงทางการเงิน</h2>
-          <p>ระบบวิเคราะห์ที่ครบครันให้คำแนะนำเฉพาะบุคคล</p>
+          <h2>{t("6 เสาหลักของความมั่นคงทางการเงิน","6 Pillars of Financial Security")}</h2>
+          <p>{t("ระบบวิเคราะห์ที่ครบครันให้คำแนะนำเฉพาะบุคคล","Comprehensive analysis with personalized guidance")}</p>
           
           <div className="pillars-grid">
             <div className="pillar-card">
@@ -243,9 +256,9 @@ function FeaturePage({ onStart }) {
       <div className="feature-section" style={{ textAlign: 'center' }}>
         <div className="feature-container">
           <div className="cta-section">
-            <h2>เริ่มวางแผนการเงิน</h2>
-            <p>ตอบคำถาม 6 ส่วน ได้รับคำแนะนำเฉพาะคุณ</p>
-            <button className="btn-start" onClick={onStart}>เปิดใช้ 6 Financial Pillars →</button>
+            <h2>{t("เริ่มวางแผนการเงิน","Start Planning")}</h2>
+            <p>{t("ตอบคำถาม 6 ส่วน ได้รับคำแนะนำเฉพาะคุณ","Answer 6 sections, get personalized advice")}</p>
+            <button className="btn-start" onClick={onStart}>{t("เริ่มใช้งาน","Get Started")} →</button>
           </div>
         </div>
       </div>
@@ -283,7 +296,7 @@ function Onboarding({ answers, setAnswers, onDone }) {
 
   return (
     <div className="app-container">
-      <Header title="มารู้จักคุณกันก่อน" sub="ตอบคำถาม 6 ส่วน">
+      <Header title={t("มารู้จักคุณกันก่อน","Let\u2019s get to know you")} sub={t("ตอบคำถาม 6 ส่วน","6 quick sections")}>
         <div style={{ display: "flex", gap: 6, marginTop: 16 }}>
           {sections.map((_, i) => (
             <div key={i} style={{
@@ -544,13 +557,13 @@ function Onboarding({ answers, setAnswers, onDone }) {
             <button onClick={() => setStep(step - 1)} style={{
               flex: 1, padding: "13px 0", borderRadius: 12, border: `1.5px solid ${T.line}`,
               background: "#fff", color: T.ink, fontSize: 15, cursor: "pointer", fontFamily: "inherit",
-            }}>← ย้อนกลับ</button>
+            }}>← {t("ย้อนกลับ","Back")}</button>
           )}
           <button disabled={!canNext} onClick={() => (step < 5 ? setStep(step + 1) : onDone())} style={{
             flex: 2, padding: "13px 0", borderRadius: 12, border: "none",
             background: canNext ? T.blue : T.line, color: "#fff", fontSize: 15, fontWeight: 700,
             cursor: canNext ? "pointer" : "not-allowed", fontFamily: "inherit",
-          }}>{step < 5 ? "ถัดไป →" : "ดู 6 Pillars 🎉"}</button>
+          }}>{step < 5 ? t("ถัดไป →","Next →") : t("ดู 6 Pillars 🎉","View 6 Pillars 🎉")}</button>
         </div>
       </div>
     </div>
@@ -571,7 +584,7 @@ function EmergencyFundPage({ answers, onBack }) {
 
   return (
     <div className="app-container">
-      <Header title="Emergency Fund" onBack={onBack} />
+      <Header title={t("เงินสำรองฉุกเฉิน","Emergency Fund")} onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
         <Card>
           <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>📊 Analysis</div>
@@ -634,7 +647,7 @@ function EmergencyFundPage({ answers, onBack }) {
 }
 
 // ===== TAX PLANNING PAGE =====
-function TaxPlanningPage({ answers, onBack }) {
+function TaxPlanningPage({ answers, onBack, onBuyFund, onEducation }) {
   const A = analyze(answers);
   const basicDeduction = answers.maritalStatus === "Single" ? 60000 : 90000;
   const dependentDeduction = (answers.dependents || 0) * 17500;
@@ -644,50 +657,214 @@ function TaxPlanningPage({ answers, onBack }) {
   const estimatedTax = taxableIncome > 0 ? taxableIncome * 0.1 : 0;
 
   const products = [
-    { name: "SSF Conservative Funds", tax: 30000, link: "https://ktx.or.th/mutual-fund" },
-    { name: "RMF Balanced Funds", tax: 50000, link: "https://ktx.or.th/rmf" },
-    { name: "SSF Equity Funds", tax: 30000, link: "https://ktx.or.th/ssf" },
+    { id: "ssf-con", name: "SSF Conservative Funds", tax: 30000, price: 10.24, risk: t("ต่ำ","Low") },
+    { id: "rmf-bal", name: "RMF Balanced Funds", tax: 50000, price: 15.87, risk: t("ปานกลาง","Medium") },
+    { id: "ssf-eq", name: "SSF Equity Funds", tax: 30000, price: 22.45, risk: t("สูง","High") },
   ];
 
   return (
     <div className="app-container">
-      <Header title="Tax Planning" onBack={onBack} />
+      <Header title={t("วางแผนภาษี","Tax Planning")} onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
         <Card>
-          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>📊 Itemized Deduction</div>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>📊 {t("รายการลดหย่อน","Itemized Deduction")}</div>
           {[
-            ["ค่าลดหย่อนอุตรักษ์", basicDeduction],
-            ["ผู้พึ่งพา", dependentDeduction],
+            [t("ค่าลดหย่อนส่วนตัว","Personal Allowance"), basicDeduction],
+            [t("ผู้พึ่งพา","Dependents"), dependentDeduction],
             ["SSF/RMF", ssfRmfDeduction],
           ].map(([name, val]) => val > 0 && (
             <div key={name} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "6px 0", borderBottom: `1px solid ${T.line}` }}>
               <span>{name}</span>
-              <b>{fmt(val)} บาท</b>
+              <b>{fmt(val)} {baht()}</b>
             </div>
           ))}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, padding: "8px 0", fontWeight: 700, color: T.blueDark }}>
-            <span>รวม</span>
-            <b>{fmt(totalDeduction)} บาท</b>
+            <span>{t("รวม","Total")}</span>
+            <b>{fmt(totalDeduction)} {baht()}</b>
           </div>
           <div style={{ marginTop: 8, fontSize: 12, color: T.sub, background: T.bg, padding: 8, borderRadius: 6 }}>
-            ประมาณการภาษี: {fmt(estimatedTax)} บาท
+            {t("ประมาณการภาษี","Estimated Tax")}: {fmt(estimatedTax)} {baht()}
+          </div>
+        </Card>
+
+        {/* TAX EDUCATION WIDGET */}
+        <Card style={{ padding: 0, overflow: "hidden", cursor: "pointer" }} onClick={onEducation}>
+          <div style={{ background: "linear-gradient(135deg, #6C5CE7, #4834D4)", padding: 16, color: "#fff", position: "relative" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 46, height: 46, borderRadius: 23, background: "rgba(255,255,255,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>▶️</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{t("เรียนรู้เรื่องภาษี","Learn About Tax")}</div>
+                <div style={{ fontSize: 12, opacity: 0.9 }}>{t("วิดีโอ + คู่มือวางแผนภาษีสำหรับมือใหม่","Videos + tax planning guides for beginners")}</div>
+              </div>
+              <span style={{ fontSize: 18 }}>→</span>
+            </div>
           </div>
         </Card>
 
         <Card>
-          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10 }}>💼 Product Recommendations</div>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10 }}>💼 {t("กองทุนแนะนำ (ลดหย่อนภาษี)","Recommended Funds (Tax Deductible)")}</div>
           {products.map((p) => (
-            <div key={p.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 10, background: T.bg, borderRadius: 8, marginBottom: 8 }}>
+            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 10, background: T.bg, borderRadius: 8, marginBottom: 8 }}>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{p.name}</div>
-                <div style={{ fontSize: 12, color: T.sub }}>ลดหย่อน {fmt(p.tax)} บาท</div>
+                <div style={{ fontSize: 12, color: T.sub }}>{t("ลดหย่อนได้สูงสุด","Max deduction")} {fmt(p.tax)} {baht()} · {t("ความเสี่ยง","Risk")} {p.risk}</div>
               </div>
-              <a href={p.link} target="_blank" rel="noopener noreferrer" style={{ background: T.blue, color: "#fff", padding: "6px 12px", borderRadius: 6, textDecoration: "none", fontSize: 12, fontWeight: 700 }}>
-                ดูข้อมูลเพิ่มเติม →
-              </a>
+              <button onClick={() => onBuyFund && onBuyFund(p)} style={{ background: T.blue, color: "#fff", padding: "6px 12px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                {t("ซื้อ KTX","Buy KTX")} →
+              </button>
             </div>
           ))}
         </Card>
+      </div>
+    </div>
+  );
+}
+
+// ===== KTX FUND BUY PAGE (Mock) =====
+function KTXBuyPage({ fund, answers, onBack }) {
+  const [amount, setAmount] = React.useState(5000);
+  const [confirmed, setConfirmed] = React.useState(false);
+  const units = fund && fund.price ? (amount / fund.price) : 0;
+
+  if (confirmed) {
+    return (
+      <div className="app-container">
+        <Header title={t("ยืนยันคำสั่งซื้อ","Order Confirmed")} />
+        <div style={{ padding: 20, textAlign: "center" }}>
+          <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: T.navy, marginBottom: 8 }}>{t("ส่งคำสั่งซื้อสำเร็จ","Order Submitted")}</div>
+          <Card style={{ textAlign: "left", marginTop: 20 }}>
+            <div style={{ fontSize: 14, lineHeight: 2, color: T.ink }}>
+              <b>{t("กองทุน","Fund")}:</b> {fund.name}<br/>
+              <b>{t("จำนวนเงิน","Amount")}:</b> {fmt(amount)} {baht()}<br/>
+              <b>NAV:</b> {fund.price} {baht()}<br/>
+              <b>{t("หน่วยลงทุนโดยประมาณ","Est. Units")}:</b> {units.toFixed(4)}<br/>
+              <b>Order ID:</b> KTX-{Date.now().toString(36).toUpperCase()}
+            </div>
+          </Card>
+          <div style={{ marginTop: 14, fontSize: 11, color: T.sub }}>⚠️ {t("นี่คือ Demo — ไม่ได้ทำรายการจริง","Demo only — no real transaction")}</div>
+          <button onClick={onBack} style={{ marginTop: 20, padding: "12px 0", width: "100%", background: T.blue, color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>← {t("กลับหน้าภาษี","Back to Tax")}</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-container">
+      <Header title="KTX" sub={t("ซื้อกองทุนรวม","Buy Mutual Fund")} onBack={onBack} />
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+        <Card>
+          <div style={{ fontSize: 18, fontWeight: 800, color: T.navy }}>{fund.name}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 12 }}>
+            {[["NAV", fund.price + " " + baht()], [t("ความเสี่ยง","Risk"), fund.risk], [t("ลดหย่อน","Deduct"), fmt(fund.tax)]].map(([k, v]) => (
+              <div key={k} style={{ background: T.bg, borderRadius: 8, padding: "8px 6px", textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: T.sub }}>{k}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.navy }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card style={{ background: "#EAF9F0", border: `1px solid ${T.good}` }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.good, marginBottom: 6 }}>📄 {t("ข้อมูลกองทุน","Fund Info")}</div>
+          <div style={{ fontSize: 13, color: T.ink, lineHeight: 1.8 }}>
+            {t("กองทุนนี้ให้สิทธิลดหย่อนภาษีสูงสุด","This fund offers tax deduction up to")} <b>{fmt(fund.tax)} {baht()}</b><br/>
+            {t("เหมาะกับผู้ที่ต้องการวางแผนภาษีระยะยาว","Suitable for long-term tax planning")}
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10 }}>🛒 {t("ระบุจำนวนเงินลงทุน","Investment Amount")}</div>
+          <Field label={t("จำนวนเงิน (บาท)","Amount (THB)")}>
+            <input style={inputStyle} type="number" value={amount} onChange={(e) => setAmount(+e.target.value || 0)} />
+          </Field>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            {[1000, 5000, 10000, 30000].map((q) => (
+              <Chip key={q} active={amount === q} onClick={() => setAmount(q)}>{fmt(q)}</Chip>
+            ))}
+          </div>
+          <div style={{ background: T.bg, borderRadius: 10, padding: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+              <span>{t("หน่วยลงทุนโดยประมาณ","Est. Units")}</span>
+              <b>{units.toFixed(4)}</b>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 700, color: T.navy }}>
+              <span>{t("มูลค่ารวม","Total")}</span>
+              <b>{fmt(amount)} {baht()}</b>
+            </div>
+          </div>
+          <button onClick={() => setConfirmed(true)} style={{ marginTop: 12, width: "100%", padding: 13, background: T.good, color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            {t("ยืนยันคำสั่งซื้อ","Confirm Order")}
+          </button>
+          <div style={{ marginTop: 8, fontSize: 11, color: T.sub, textAlign: "center" }}>⚠️ {t("Demo Mode — ไม่ได้ทำรายการจริง","Demo Mode — no real transaction")}</div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ===== TAX EDUCATION PAGE (Mockup) =====
+function TaxEducationPage({ onBack }) {
+  const videos = [
+    { title: t("ภาษีเงินได้บุคคลธรรมดา 101","Personal Income Tax 101"), dur: "8:24", views: "12K", thumb: "🎬" },
+    { title: t("SSF vs RMF ต่างกันยังไง","SSF vs RMF Explained"), dur: "6:15", views: "8.5K", thumb: "📊" },
+    { title: t("ลดหย่อนภาษีให้ครบทุกสิทธิ","Maximize Your Tax Deductions"), dur: "10:02", views: "20K", thumb: "💡" },
+    { title: t("วางแผนภาษีสำหรับ First Jobber","Tax Planning for First Jobbers"), dur: "7:38", views: "15K", thumb: "👔" },
+  ];
+  const articles = [
+    { title: t("คู่มือยื่นภาษีออนไลน์ ภ.ง.ด.90/91","Online Tax Filing Guide"), src: t("บทความ","Article") },
+    { title: t("อัตราภาษีขั้นบันไดล่าสุด","Latest Progressive Tax Rates"), src: t("บทความ","Article") },
+    { title: t("รวมสิทธิลดหย่อนปีนี้","This Year's Deductions Checklist"), src: t("บทความ","Article") },
+  ];
+
+  return (
+    <div className="app-container">
+      <Header title={t("เรียนรู้เรื่องภาษี","Tax Education")} onBack={onBack} />
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* Featured video mockup */}
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ background: "linear-gradient(135deg, #2D3436, #636E72)", height: 180, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+            <div style={{ width: 60, height: 60, borderRadius: 30, background: "rgba(255,255,255,.9)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, cursor: "pointer" }}>▶️</div>
+            <div style={{ position: "absolute", bottom: 10, right: 10, background: "rgba(0,0,0,.7)", color: "#fff", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>12:30</div>
+            <div style={{ position: "absolute", top: 10, left: 10, background: T.bad, color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4 }}>{t("แนะนำ","FEATURED")}</div>
+          </div>
+          <div style={{ padding: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>{t("เริ่มต้นวางแผนภาษีใน 15 นาที","Start Tax Planning in 15 Minutes")}</div>
+            <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>{t("คอร์สพื้นฐานสำหรับผู้เริ่มต้น","Beginner-friendly crash course")}</div>
+          </div>
+        </Card>
+
+        <div>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10 }}>🎥 {t("วิดีโอสอน","Video Lessons")}</div>
+          {videos.map((v, i) => (
+            <Card key={i} style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 8, cursor: "pointer" }}>
+              <div style={{ width: 54, height: 54, borderRadius: 10, background: "linear-gradient(135deg, #A29BFE, #6C5CE7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{v.thumb}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 13, color: T.navy }}>{v.title}</div>
+                <div style={{ fontSize: 11, color: T.sub }}>⏱️ {v.dur} · 👁️ {v.views} {t("ครั้ง","views")}</div>
+              </div>
+              <span style={{ fontSize: 18, color: T.blue }}>▶️</span>
+            </Card>
+          ))}
+        </div>
+
+        <div>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10 }}>📚 {t("บทความ","Articles")}</div>
+          {articles.map((a, i) => (
+            <Card key={i} style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 8, cursor: "pointer" }}>
+              <span style={{ fontSize: 22 }}>📄</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 13, color: T.navy }}>{a.title}</div>
+                <div style={{ fontSize: 11, color: T.sub }}>{a.src}</div>
+              </div>
+              <span style={{ fontSize: 16, color: T.blue }}>→</span>
+            </Card>
+          ))}
+        </div>
+
+        <div style={{ fontSize: 11, color: T.sub, textAlign: "center", padding: 8 }}>
+          ⚠️ {t("เนื้อหาเพื่อการศึกษา (Mockup) เท่านั้น","Educational content (Mockup) only")}
+        </div>
       </div>
     </div>
   );
@@ -699,7 +876,7 @@ function DailySpendingPage({ answers, onBack }) {
   
   return (
     <div className="app-container">
-      <Header title="Daily Spending" onBack={onBack} />
+      <Header title={t("การใช้จ่ายประจำวัน","Daily Spending")} onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
         <Card>
           <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>📈 Financial Discipline</div>
@@ -752,7 +929,7 @@ function SavingGoalsPage({ answers, onBack }) {
 
   return (
     <div className="app-container">
-      <Header title="Saving Goals" onBack={onBack} />
+      <Header title={t("เป้าหมายการออม","Saving Goals")} onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
         {goals.length === 0 ? (
           <Card><div style={{ fontSize: 14, color: T.sub }}>ยังไม่มีเป้าหมาย</div></Card>
@@ -948,7 +1125,7 @@ CRITICAL COMPLIANCE RULES — FOLLOW STRICTLY:
 
   return (
     <div className="app-container">
-      <Header title="Investment" onBack={onBack} />
+      <Header title={t("การลงทุน","Investment")} onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ display: "flex", gap: 8 }}>
           <Chip active={tab === "news"} onClick={() => setTab("news")}>📰 AI News Feed</Chip>
@@ -1133,7 +1310,7 @@ function InsurancePage({ answers, onBack }) {
 
   return (
     <div className="app-container">
-      <Header title="Insurance" onBack={onBack} />
+      <Header title={t("ประกัน","Insurance")} onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
         <Card>
           <div style={{ fontWeight: 700, color: T.navy, marginBottom: 8 }}>🛡️ Protection Status</div>
@@ -1304,7 +1481,7 @@ function WealthAllocationPage({ answers, onNext, onBack }) {
 
   return (
     <div className="app-container">
-      <Header title="Smart Wealth Allocation" sub="เปลี่ยน Financial Profile เป็นแผนการเงินเฉพาะคุณ" onBack={onBack} />
+      <Header title={t("Smart Wealth Allocation","Smart Wealth Allocation")} sub={t("เปลี่ยน Financial Profile เป็นแผนการเงินเฉพาะคุณ","Turn your profile into a personalized plan")} onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ fontSize: 13, color: T.sub, background: "#F0F8FF", padding: 10, borderRadius: 10 }}>
           🧭 วิเคราะห์จากคำตอบของคุณ ({A.occ.label} · {fmt(answers.income)} บาท/เดือน) แล้วจัดลำดับความสำคัญ + สัดส่วนการเงินให้อัตโนมัติ
@@ -1365,141 +1542,192 @@ function WealthAllocationPage({ answers, onNext, onBack }) {
   );
 }
 
-// ===== FINANCIAL TREE PAGE (Focus Plant Style) =====
+// ===== FINANCIAL TREE PAGE (cartoonish) =====
+function TreeSVG({ answers, height }) {
+  const A = analyze(answers);
+  const goalObjs = (answers.goals || []).map((gid) => GOALS.find((x) => x.id === gid)).filter(Boolean);
+  const treeStage = A.overall >= 70 ? "flourishing" : A.overall >= 45 ? "growing" : "seedling";
+  const rootScore = Math.round((A.efScore + A.insScore + A.spendScore) / 3);
+  const trunkScore = Math.round((A.invScore + A.taxScore) / 2);
+
+  // canopy size by stage
+  const canopy = treeStage === "flourishing" ? 1 : treeStage === "growing" ? 0.8 : 0.6;
+  const leafDark = "#3E8E41", leafMid = "#57B24F", leafLight = "#7BC96F";
+
+  // Goal positions on the canopy (cartoon apples/fruits)
+  const goalPos = [
+    { x: 140, y: 120 }, { x: 220, y: 120 }, { x: 180, y: 95 },
+    { x: 120, y: 165 }, { x: 240, y: 165 }, { x: 180, y: 150 },
+  ];
+
+  return (
+    <svg viewBox="0 0 360 440" style={{ width: "100%", height: height || "auto", display: "block" }}>
+      <defs>
+        <radialGradient id="sky" cx="50%" cy="30%" r="80%">
+          <stop offset="0%" stopColor="#EAF6FF" />
+          <stop offset="100%" stopColor="#CDE9FB" />
+        </radialGradient>
+        <linearGradient id="trunkGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#8B5A2B" />
+          <stop offset="50%" stopColor="#A9743E" />
+          <stop offset="100%" stopColor="#7A4A22" />
+        </linearGradient>
+        <radialGradient id="leafGrad" cx="50%" cy="40%" r="70%">
+          <stop offset="0%" stopColor="#8FD483" />
+          <stop offset="100%" stopColor="#3E8E41" />
+        </radialGradient>
+      </defs>
+
+      {/* Sky background */}
+      <rect x="0" y="0" width="360" height="440" fill="url(#sky)" rx="16" />
+
+      {/* Sun */}
+      <circle cx="308" cy="52" r="26" fill="#FFD93D" />
+      <circle cx="308" cy="52" r="26" fill="#FFD93D" opacity="0.4">
+        <animate attributeName="r" values="26;30;26" dur="3s" repeatCount="indefinite" />
+      </circle>
+
+      {/* Clouds */}
+      <g fill="#fff" opacity="0.9">
+        <ellipse cx="70" cy="55" rx="26" ry="15" />
+        <ellipse cx="92" cy="55" rx="20" ry="12" />
+        <ellipse cx="52" cy="58" rx="16" ry="10" />
+      </g>
+
+      {/* Grass hill */}
+      <ellipse cx="180" cy="400" rx="180" ry="45" fill="#8FCB6B" />
+      <ellipse cx="180" cy="395" rx="150" ry="32" fill="#A5D97F" />
+
+      {/* ROOTS (under hill, semi-visible) */}
+      <g stroke="#6B4423" fill="none" strokeLinecap="round" opacity={0.35 + rootScore * 0.004}>
+        <path d="M180 375 C150 395 120 405 95 420" strokeWidth="6" />
+        <path d="M180 375 C210 395 240 405 265 420" strokeWidth="6" />
+        <path d="M180 375 C165 400 155 415 150 430" strokeWidth="4" />
+        <path d="M180 375 C195 400 205 415 210 430" strokeWidth="4" />
+      </g>
+
+      {/* TRUNK - tapered cartoon */}
+      <path d="M162 385 Q158 300 165 240 Q168 215 180 205 Q192 215 195 240 Q202 300 198 385 Z"
+        fill="url(#trunkGrad)" opacity={0.7 + trunkScore * 0.003} />
+      {/* trunk highlight */}
+      <path d="M170 380 Q168 300 173 240" stroke="#C68B5A" strokeWidth="4" fill="none" opacity="0.5" strokeLinecap="round" />
+      {/* bark lines */}
+      <path d="M185 360 Q183 320 186 280" stroke="#5E3A1A" strokeWidth="2" fill="none" opacity="0.3" />
+
+      {/* BRANCHES */}
+      <g stroke="url(#trunkGrad)" fill="none" strokeLinecap="round">
+        <path d="M172 235 Q140 215 112 195" strokeWidth="9" />
+        <path d="M188 235 Q220 215 248 195" strokeWidth="9" />
+        <path d="M175 210 Q160 185 150 165" strokeWidth="7" />
+        <path d="M185 210 Q200 185 210 165" strokeWidth="7" />
+      </g>
+
+      {/* CANOPY - layered fluffy cartoon leaves */}
+      <g transform={`translate(180 140) scale(${canopy}) translate(-180 -140)`}>
+        <circle cx="180" cy="145" r="72" fill="url(#leafGrad)" />
+        <circle cx="122" cy="150" r="48" fill={leafMid} />
+        <circle cx="238" cy="150" r="48" fill={leafMid} />
+        <circle cx="150" cy="105" r="50" fill={leafLight} />
+        <circle cx="212" cy="108" r="46" fill={leafLight} />
+        <circle cx="180" cy="88" r="44" fill={leafMid} />
+        {/* shading blobs */}
+        <circle cx="205" cy="165" r="30" fill={leafDark} opacity="0.35" />
+        <circle cx="145" cy="168" r="26" fill={leafDark} opacity="0.3" />
+        {/* leaf texture dots */}
+        <g fill="#fff" opacity="0.25">
+          <circle cx="160" cy="110" r="5" /><circle cx="200" cy="125" r="4" />
+          <circle cx="180" cy="150" r="5" /><circle cx="135" cy="140" r="4" />
+          <circle cx="225" cy="140" r="4" />
+        </g>
+      </g>
+
+      {/* GOAL FRUITS on canopy */}
+      {goalObjs.slice(0, 6).map((g, idx) => {
+        const p = goalPos[idx] || goalPos[0];
+        return (
+          <g key={idx}>
+            <circle cx={p.x} cy={p.y} r="17" fill="#fff" stroke="#FFD93D" strokeWidth="2.5" />
+            <text x={p.x} y={p.y + 6} fontSize="17" textAnchor="middle">{g.icon}</text>
+          </g>
+        );
+      })}
+      {goalObjs.length === 0 && (
+        <text x="180" y="145" fontSize="11" textAnchor="middle" fill="#fff" fontWeight="700">{t("ยังไม่มีเป้าหมาย","No goals yet")}</text>
+      )}
+
+      {/* Overall score badge on trunk */}
+      <circle cx="180" cy="230" r="24" fill="#fff" stroke={A.overall >= 70 ? T.good : A.overall >= 45 ? T.warn : T.bad} strokeWidth="4" />
+      <text x="180" y="237" fontSize="17" textAnchor="middle" fontWeight="800" fill={T.navy}>{A.overall}</text>
+
+      {/* Little flowers on grass */}
+      <g>
+        <text x="55" y="410" fontSize="16">🌷</text>
+        <text x="285" y="410" fontSize="16">🌼</text>
+        {treeStage === "flourishing" && <text x="120" y="418" fontSize="14">🌸</text>}
+      </g>
+    </svg>
+  );
+}
+
 function FinancialTreePage({ answers, onBack, onRewards }) {
   const A = analyze(answers);
   const goalObjs = (answers.goals || []).map((gid) => GOALS.find((x) => x.id === gid)).filter(Boolean);
-
-  // Points calculation
-  const points = React.useMemo(() => {
-    let pts = 0;
-    if (A.efScore >= 70) pts += 200;
-    else if (A.efScore >= 40) pts += 80;
-    if (A.insScore >= 70) pts += 150;
-    else if (A.insScore >= 40) pts += 60;
-    if (A.spendScore >= 60) pts += 100;
-    if (A.invScore >= 60) pts += 150;
-    if (A.goalsScore >= 60) pts += 120;
-    if (A.taxScore >= 60) pts += 80;
-    pts += Math.floor((answers.income || 0) / 100);
-    return pts;
-  }, [answers]);
-
-  // Tree health based on overall score
   const treeStage = A.overall >= 70 ? "flourishing" : A.overall >= 45 ? "growing" : "seedling";
-  const leafColor = treeStage === "flourishing" ? "#2D8A4E" : treeStage === "growing" ? "#5DAE5B" : "#A0C49D";
-  const trunkColor = "#8B6F47";
-
-  // Root health (EF + Insurance + Spending)
   const rootScore = Math.round((A.efScore + A.insScore + A.spendScore) / 3);
-  // Trunk health (Investment + Tax = Wealth Building)
   const trunkScore = Math.round((A.invScore + A.taxScore) / 2);
-  // Branch health (Goals)
-  const branchScore = A.goalsScore;
 
-  function ScoreBar({ label, score, color }) {
-    return (
-      <div style={{ marginBottom: 6 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
-          <span style={{ color: T.sub }}>{label}</span>
-          <b style={{ color: score >= 70 ? T.good : score >= 45 ? T.warn : T.bad }}>{score}/100</b>
-        </div>
-        <div style={{ height: 6, borderRadius: 3, background: T.line, overflow: "hidden" }}>
-          <div style={{ width: `${score}%`, height: "100%", borderRadius: 3, background: color, transition: "width .6s" }} />
-        </div>
-      </div>
-    );
-  }
+  let points = 0;
+  if (A.efScore >= 70) points += 200; else if (A.efScore >= 40) points += 80;
+  if (A.insScore >= 70) points += 150; else if (A.insScore >= 40) points += 60;
+  if (A.spendScore >= 60) points += 100;
+  if (A.invScore >= 60) points += 150;
+  if (A.goalsScore >= 60) points += 120;
+  if (A.taxScore >= 60) points += 80;
+  points += Math.floor((answers.income || 0) / 100);
+
+  const stageLabel = treeStage === "flourishing" ? t("🌳 เติบโตสมบูรณ์!","🌳 Flourishing!") : treeStage === "growing" ? t("🌿 กำลังเติบโต","🌿 Growing") : t("🌱 เริ่มปลูก","🌱 Seedling");
+
+  const parts = [
+    { emoji: "🌿", label: t("ราก","Roots"), desc: t("EF + ประกัน + การใช้จ่าย","EF + Insurance + Spending"), score: rootScore },
+    { emoji: "🪵", label: t("ลำต้น","Trunk"), desc: t("ลงทุน + ภาษี","Investment + Tax"), score: trunkScore },
+    { emoji: "🌸", label: t("กิ่ง","Branches"), desc: t("เป้าหมาย","Goals"), score: A.goalsScore },
+  ];
 
   return (
     <div className="app-container">
-      <Header title="Financial Tree" sub={`🌱 ${treeStage === "flourishing" ? "ต้นไม้เติบโตสมบูรณ์!" : treeStage === "growing" ? "กำลังเติบโต..." : "เพิ่งเริ่มปลูก"}`} onBack={onBack} />
+      <Header title={t("ต้นไม้การเงิน","Financial Tree")} sub={stageLabel} onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-
-        {/* TREE SVG */}
-        <Card style={{ padding: 0, overflow: "hidden", background: "linear-gradient(180deg, #E8F4FD 0%, #F5F0E8 100%)" }}>
-          <svg viewBox="0 0 320 380" style={{ width: "100%", display: "block" }}>
-            {/* Sky */}
-            <circle cx="260" cy="50" r="18" fill="#FFE066" opacity="0.7" />
-
-            {/* Roots */}
-            <g opacity={rootScore > 30 ? 1 : 0.4}>
-              <path d="M160 310 Q120 340 80 360" stroke="#7A5C3A" strokeWidth="4" fill="none" strokeLinecap="round" />
-              <path d="M160 310 Q140 350 130 370" stroke="#7A5C3A" strokeWidth="3" fill="none" strokeLinecap="round" />
-              <path d="M160 310 Q200 340 240 360" stroke="#7A5C3A" strokeWidth="4" fill="none" strokeLinecap="round" />
-              <path d="M160 310 Q180 350 190 370" stroke="#7A5C3A" strokeWidth="3" fill="none" strokeLinecap="round" />
-            </g>
-            {/* Root labels */}
-            <text x="55" y="375" fontSize="8" fill="#7A5C3A" fontWeight="600">Emergency Fund</text>
-            <text x="130" y="378" fontSize="8" fill="#7A5C3A" fontWeight="600">Insurance</text>
-            <text x="200" y="375" fontSize="8" fill="#7A5C3A" fontWeight="600">Daily Spending</text>
-
-            {/* Ground */}
-            <ellipse cx="160" cy="315" rx="120" ry="12" fill="#C4A97D" opacity="0.5" />
-
-            {/* Trunk */}
-            <rect x="148" y="180" width="24" height="135" rx="6" fill={trunkColor} opacity={trunkScore > 30 ? 1 : 0.5} />
-            <rect x="152" y="190" width="4" height="120" rx="2" fill="#A0845C" opacity="0.4" />
-            <text x="115" y="265" fontSize="9" fill={trunkColor} fontWeight="700" opacity="0.8">Wealth Building</text>
-
-            {/* Branches + Leaves (canopy) */}
-            <g opacity={branchScore > 20 ? 1 : 0.4}>
-              {/* Main canopy */}
-              <ellipse cx="160" cy="130" rx={treeStage === "flourishing" ? 95 : treeStage === "growing" ? 75 : 50} ry={treeStage === "flourishing" ? 80 : treeStage === "growing" ? 60 : 40} fill={leafColor} opacity="0.85" />
-              <ellipse cx="120" cy="110" rx={treeStage === "flourishing" ? 55 : 35} ry={treeStage === "flourishing" ? 50 : 30} fill={leafColor} opacity="0.7" />
-              <ellipse cx="200" cy="115" rx={treeStage === "flourishing" ? 50 : 30} ry={treeStage === "flourishing" ? 45 : 28} fill={leafColor} opacity="0.7" />
-              {treeStage === "flourishing" && <ellipse cx="160" cy="75" rx="40" ry="35" fill="#228B22" opacity="0.5" />}
-            </g>
-
-            {/* Goal icons on branches */}
-            {goalObjs.slice(0, 6).map((g, i) => {
-              const angles = [-50, -20, 10, 40, -35, 25];
-              const radii = [65, 58, 58, 65, 45, 45];
-              const angle = (angles[i] || 0) * Math.PI / 180;
-              const r = radii[i] || 55;
-              const cx = 160 + r * Math.sin(angle);
-              const cy = 120 - r * Math.cos(angle);
-              return (
-                <g key={i}>
-                  <circle cx={cx} cy={cy} r="14" fill="white" opacity="0.9" />
-                  <text x={cx} y={cy + 5} fontSize="14" textAnchor="middle">{g.icon}</text>
-                </g>
-              );
-            })}
-
-            {/* Points badge */}
-            <g>
-              <rect x="220" y="20" width="85" height="30" rx="15" fill="#FFB800" />
-              <text x="262" y="40" fontSize="13" fill="white" textAnchor="middle" fontWeight="800">⭐ {fmt(points)} pts</text>
-            </g>
-          </svg>
+        <Card style={{ padding: 8, overflow: "hidden" }}>
+          <TreeSVG answers={answers} />
         </Card>
 
-        {/* TREE HEALTH BREAKDOWN */}
         <Card>
-          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 12 }}>🌳 สุขภาพต้นไม้การเงิน</div>
-          <ScoreBar label="🌿 ราก — Emergency Fund + Insurance + Spending" score={rootScore} color="#7A5C3A" />
-          <ScoreBar label="🪵 ลำต้น — Wealth Building (Investment + Tax)" score={trunkScore} color="#8B6F47" />
-          <ScoreBar label="🌸 กิ่ง — Financial Goals" score={branchScore} color={leafColor} />
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 12 }}>🌳 {t("สุขภาพต้นไม้การเงิน","Financial Tree Health")}</div>
+          {parts.map((s) => (
+            <div key={s.label} style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
+                <span style={{ color: T.sub }}>{s.emoji} {s.label} — {s.desc}</span>
+                <b style={{ color: s.score >= 70 ? T.good : s.score >= 45 ? T.warn : T.bad }}>{s.score}/100</b>
+              </div>
+              <div style={{ height: 7, borderRadius: 4, background: T.line, overflow: "hidden" }}>
+                <div style={{ width: `${s.score}%`, height: "100%", borderRadius: 4, background: s.score >= 70 ? T.good : s.score >= 45 ? T.warn : T.bad, transition: "width .6s" }} />
+              </div>
+            </div>
+          ))}
           <div style={{ marginTop: 8, background: T.bg, borderRadius: 8, padding: 10, fontSize: 12, color: T.ink, lineHeight: 1.7 }}>
-            {treeStage === "seedling" && "🌱 ต้นไม้เพิ่งเริ่มเติบโต — เริ่มสร้างรากฐาน (Emergency Fund) ให้แข็งแรงก่อน"}
-            {treeStage === "growing" && "🌿 ต้นไม้กำลังเติบโต — ลำต้นเริ่มแข็งแรง ขยายกิ่งก้านต่อได้"}
-            {treeStage === "flourishing" && "🌳 ต้นไม้เติบโตสมบูรณ์! — รากแข็งแรง ลำต้นมั่นคง กิ่งก้านเต็มเป้าหมาย"}
+            {treeStage === "seedling" && t("🌱 ต้นไม้เพิ่งเริ่มเติบโต — สร้างรากฐาน (Emergency Fund) ให้แข็งแรงก่อน","🌱 Your tree is just sprouting — build a strong foundation (Emergency Fund) first.")}
+            {treeStage === "growing" && t("🌿 ต้นไม้กำลังเติบโต — ลำต้นเริ่มแข็งแรง ขยายกิ่งก้านต่อได้","🌿 Your tree is growing — the trunk is getting stronger, keep expanding.")}
+            {treeStage === "flourishing" && t("🌳 ต้นไม้เติบโตสมบูรณ์! — รากแข็งแรง ลำต้นมั่นคง กิ่งก้านเต็มเป้าหมาย","🌳 Your tree is flourishing! — strong roots, solid trunk, branches full of goals.")}
           </div>
         </Card>
 
-        {/* POINTS SUMMARY */}
-        <Card style={{ background: "linear-gradient(135deg, #FFF8E1, #FFF3CD)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Card style={{ background: "linear-gradient(135deg, #FFF8E1, #FFF3CD)" }} onClick={onRewards}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
             <div>
-              <div style={{ fontWeight: 700, color: T.navy }}>⭐ คะแนนสะสม</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: "#FFB800" }}>{fmt(points)} pts</div>
-              <div style={{ fontSize: 11, color: T.sub }}>ใช้งาน 100 บาท = 1 point + โบนัสจากเป้าหมาย</div>
+              <div style={{ fontWeight: 700, color: T.navy, fontSize: 13 }}>⭐ {t("คะแนนสะสม","Reward Points")}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#FFB800" }}>{fmt(points)} pts</div>
             </div>
-            <button onClick={onRewards} style={{
-              background: "#FFB800", color: "#fff", border: "none", borderRadius: 10,
-              padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-            }}>แลกรางวัล →</button>
+            <div style={{ background: "#FFB800", color: "#fff", padding: "8px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>{t("แลกรางวัล","Redeem")} →</div>
           </div>
         </Card>
       </div>
@@ -1563,13 +1791,13 @@ function RewardsPage({ answers, onBack }) {
           <div style={{ fontSize: 11, fontWeight: 700, color: "#FFB800", marginTop: 2 }}>⭐ {r.pts} pts</div>
         </div>
         {isRedeemed ? (
-          <span style={{ fontSize: 11, fontWeight: 700, color: T.good, padding: "4px 10px", background: "#E0F5E9", borderRadius: 8 }}>✅ แลกแล้ว</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: T.good, padding: "4px 10px", background: "#E0F5E9", borderRadius: 8 }}>✅ {t("แลกแล้ว","Redeemed")}</span>
         ) : (
           <button disabled={!canAfford} onClick={() => redeem(r)} style={{
             padding: "6px 12px", borderRadius: 8, border: "none", fontSize: 11, fontWeight: 700,
             background: canAfford ? "#FFB800" : T.line, color: canAfford ? "#fff" : T.sub,
             cursor: canAfford ? "pointer" : "not-allowed", fontFamily: "inherit",
-          }}>แลก</button>
+          }}>{t("แลก","Redeem")}</button>
         )}
       </div>
     );
@@ -1577,22 +1805,22 @@ function RewardsPage({ answers, onBack }) {
 
   return (
     <div className="app-container">
-      <Header title="Rewards" sub="แลกคะแนนเป็นสิทธิพิเศษ" onBack={onBack} />
+      <Header title={t("รางวัล","Rewards")} sub={t("แลกคะแนนเป็นสิทธิพิเศษ","Redeem points for perks")} onBack={onBack} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
 
         <Card style={{ background: "linear-gradient(135deg, #FFF8E1, #FFF3CD)", textAlign: "center" }}>
-          <div style={{ fontSize: 12, color: T.sub }}>คะแนนคงเหลือ</div>
+          <div style={{ fontSize: 12, color: T.sub }}>{t("คะแนนคงเหลือ","Points balance")}</div>
           <div style={{ fontSize: 36, fontWeight: 800, color: "#FFB800" }}>⭐ {fmt(remaining)}</div>
           <div style={{ fontSize: 11, color: T.sub }}>จากทั้งหมด {fmt(points)} pts (ใช้ไป {fmt(usedPts)} pts)</div>
         </Card>
 
         <div>
-          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10, fontSize: 15 }}>🛍️ Lifestyle Rewards</div>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10, fontSize: 15 }}>🛍️ {t("รางวัลไลฟ์สไตล์","Lifestyle Rewards")}</div>
           {lifestyleRewards.map((r) => <RewardCard key={r.id} r={r} />)}
         </div>
 
         <div>
-          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10, fontSize: 15 }}>💼 Financial Rewards</div>
+          <div style={{ fontWeight: 700, color: T.navy, marginBottom: 10, fontSize: 15 }}>💼 {t("รางวัลการเงิน","Financial Rewards")}</div>
           {financialRewards.map((r) => <RewardCard key={r.id} r={r} />)}
         </div>
       </div>
@@ -1601,26 +1829,17 @@ function RewardsPage({ answers, onBack }) {
 }
 
 // ===== DASHBOARD =====
-function Dashboard({ answers, go, onEdit, onRewards }) {
+function Dashboard({ answers, go, onEdit, onRewards, onTree }) {
   const A = analyze(answers);
   const pillars = [
-    { id: "emergency", en: "Emergency Fund", icon: "🛟", score: A.efScore },
-    { id: "tax", en: "Tax Planning", icon: "🧾", score: A.taxScore },
-    { id: "spending", en: "Daily Spending", icon: "💳", score: A.spendScore },
-    { id: "goals", en: "Saving Goals", icon: "🎯", score: A.goalsScore },
-    { id: "invest", en: "Investment", icon: "📈", score: A.invScore },
-    { id: "insurance", en: "Insurance", icon: "🛡️", score: A.insScore },
+    { id: "emergency", en: "Emergency Fund", th: "เงินสำรองฉุกเฉิน", icon: "🛟", score: A.efScore },
+    { id: "tax", en: "Tax Planning", th: "วางแผนภาษี", icon: "🧾", score: A.taxScore },
+    { id: "spending", en: "Daily Spending", th: "การใช้จ่าย", icon: "💳", score: A.spendScore },
+    { id: "goals", en: "Saving Goals", th: "เป้าหมายการออม", icon: "🎯", score: A.goalsScore },
+    { id: "invest", en: "Investment", th: "การลงทุน", icon: "📈", score: A.invScore },
+    { id: "insurance", en: "Insurance", th: "ประกัน", icon: "🛡️", score: A.insScore },
   ];
 
-  const goalObjs = (answers.goals || []).map((gid) => GOALS.find((x) => x.id === gid)).filter(Boolean);
-
-  // Tree stage
-  const treeStage = A.overall >= 70 ? "flourishing" : A.overall >= 45 ? "growing" : "seedling";
-  const leafColor = treeStage === "flourishing" ? "#2D8A4E" : treeStage === "growing" ? "#5DAE5B" : "#A0C49D";
-  const rootScore = Math.round((A.efScore + A.insScore + A.spendScore) / 3);
-  const trunkScore = Math.round((A.invScore + A.taxScore) / 2);
-
-  // Points
   let points = 0;
   if (A.efScore >= 70) points += 200; else if (A.efScore >= 40) points += 80;
   if (A.insScore >= 70) points += 150; else if (A.insScore >= 40) points += 60;
@@ -1632,9 +1851,9 @@ function Dashboard({ answers, go, onEdit, onRewards }) {
 
   return (
     <div className="app-container">
-      <Header title="6 Financial Pillars" sub={`${A.occ.label} · ${fmt(answers.income)} บาท/เดือน`}>
+      <Header title={t("6 เสาหลักการเงิน","6 Financial Pillars")} sub={`${A.occ.label} · ${fmt(answers.income)} ${t("บาท/เดือน","THB/mo")}`}>
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-          <button onClick={onEdit} style={{ background: "rgba(255,255,255,.18)", color: "#fff", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>✏️ แก้ไข</button>
+          <button onClick={onEdit} style={{ background: "rgba(255,255,255,.18)", color: "#fff", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>✏️ {t("แก้ไข","Edit")}</button>
           <button onClick={onRewards} style={{ background: "#FFB800", color: "#fff", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>⭐ {fmt(points)} pts</button>
         </div>
       </Header>
@@ -1651,124 +1870,20 @@ function Dashboard({ answers, go, onEdit, onRewards }) {
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>{p.score}</div>
                 </div>
               </div>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>{p.en}</div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{t(p.th, p.en)}</div>
             </Card>
           ))}
         </div>
 
-        {/* ===== FINANCIAL TREE (inline) ===== */}
-        <Card style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ background: "linear-gradient(180deg, #D4EDFC 0%, #FDFAF3 50%, #E8DCC8 100%)", padding: "0 0 10px", position: "relative" }}>
-            <svg viewBox="0 0 360 420" style={{ width: "100%", display: "block" }}>
-              {/* Sun & clouds */}
-              <circle cx="300" cy="42" r="22" fill="#FFE066" opacity="0.8" />
-              <ellipse cx="70" cy="35" rx="28" ry="10" fill="#fff" opacity="0.6" />
-              <ellipse cx="55" cy="32" rx="20" ry="8" fill="#fff" opacity="0.7" />
-
-              {/* ---- ROOTS ---- */}
-              <g opacity={rootScore > 25 ? 0.6 + rootScore * 0.004 : 0.3}>
-                {/* Main roots */}
-                <path d="M180 340 C150 355 115 365 70 380" stroke="#6B5335" strokeWidth="5" fill="none" strokeLinecap="round" />
-                <path d="M180 340 C155 360 140 375 120 395" stroke="#6B5335" strokeWidth="4" fill="none" strokeLinecap="round" />
-                <path d="M180 340 C210 355 245 365 290 380" stroke="#6B5335" strokeWidth="5" fill="none" strokeLinecap="round" />
-                <path d="M180 340 C205 360 220 375 240 395" stroke="#6B5335" strokeWidth="4" fill="none" strokeLinecap="round" />
-                {/* Thin roots */}
-                <path d="M180 340 C165 365 155 390 150 410" stroke="#6B5335" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-                <path d="M180 340 C195 365 205 390 210 410" stroke="#6B5335" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-              </g>
-
-              {/* Root labels */}
-              <g fontSize="9" fill="#6B5335" fontWeight="700">
-                <text x="30" y="392">🛟 Emergency</text>
-                <text x="105" y="412">🛡️ Insurance</text>
-                <text x="225" y="412">💳 Spending</text>
-              </g>
-
-              {/* Ground */}
-              <ellipse cx="180" cy="345" rx="145" ry="14" fill="#B89B6A" opacity="0.35" />
-              <line x1="35" y1="345" x2="325" y2="345" stroke="#B89B6A" strokeWidth="1" opacity="0.3" />
-
-              {/* ---- TRUNK ---- */}
-              <g opacity={trunkScore > 25 ? 0.7 + trunkScore * 0.003 : 0.4}>
-                <path d="M170 340 Q168 280 166 220 Q164 195 172 180" fill="#8B6F47" stroke="#7A5C3A" strokeWidth="1" />
-                <path d="M190 340 Q192 280 194 220 Q196 195 188 180" fill="#8B6F47" stroke="#7A5C3A" strokeWidth="1" />
-                <path d="M170 340 L190 340 L188 180 L172 180 Z" fill="#8B6F47" />
-                {/* Bark texture */}
-                <line x1="178" y1="200" x2="178" y2="330" stroke="#7A5C3A" strokeWidth="1.5" opacity="0.3" />
-                <line x1="183" y1="210" x2="183" y2="325" stroke="#7A5C3A" strokeWidth="1" opacity="0.2" />
-              </g>
-              <text x="112" y="290" fontSize="9" fill="#7A5C3A" fontWeight="700" opacity="0.7">📈 Wealth Building</text>
-
-              {/* ---- BRANCHES (structural) ---- */}
-              <g stroke="#7A5C3A" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.7">
-                <path d="M175 220 Q140 200 110 175" />
-                <path d="M185 220 Q220 200 250 175" />
-                <path d="M172 195 Q145 170 120 140" />
-                <path d="M188 195 Q215 170 240 140" />
-                <path d="M180 185 Q180 160 180 130" />
-              </g>
-
-              {/* ---- CANOPY (leaves) ---- */}
-              <g>
-                {/* Layer 1: base */}
-                <ellipse cx="180" cy="130" rx={treeStage === "flourishing" ? 110 : treeStage === "growing" ? 85 : 55} ry={treeStage === "flourishing" ? 85 : treeStage === "growing" ? 65 : 42} fill={leafColor} opacity="0.75" />
-                {/* Layer 2: left cluster */}
-                <ellipse cx="130" cy="115" rx={treeStage === "flourishing" ? 60 : treeStage === "growing" ? 42 : 25} ry={treeStage === "flourishing" ? 55 : treeStage === "growing" ? 38 : 22} fill={leafColor} opacity="0.65" />
-                {/* Layer 3: right cluster */}
-                <ellipse cx="230" cy="120" rx={treeStage === "flourishing" ? 55 : treeStage === "growing" ? 38 : 22} ry={treeStage === "flourishing" ? 50 : treeStage === "growing" ? 35 : 20} fill={leafColor} opacity="0.65" />
-                {/* Layer 4: top highlight */}
-                {treeStage !== "seedling" && <ellipse cx="180" cy="85" rx={treeStage === "flourishing" ? 50 : 30} ry={treeStage === "flourishing" ? 40 : 22} fill="#228B22" opacity="0.4" />}
-                {/* Layer 5: flourishing extra */}
-                {treeStage === "flourishing" && <>
-                  <ellipse cx="110" cy="90" rx="30" ry="28" fill="#1E7A1E" opacity="0.35" />
-                  <ellipse cx="250" cy="95" rx="28" ry="25" fill="#1E7A1E" opacity="0.35" />
-                </>}
-              </g>
-
-              {/* ---- GOAL ICONS on canopy ---- */}
-              {goalObjs.slice(0, 6).map((g, idx) => {
-                const pos = [
-                  { x: 130, y: 85 }, { x: 230, y: 90 }, { x: 180, y: 65 },
-                  { x: 115, y: 130 }, { x: 245, y: 130 }, { x: 180, y: 110 },
-                ];
-                const p = pos[idx] || pos[0];
-                return (
-                  <g key={idx}>
-                    <circle cx={p.x} cy={p.y} r="16" fill="white" opacity="0.92" />
-                    <text x={p.x} y={p.y + 6} fontSize="16" textAnchor="middle">{g.icon}</text>
-                  </g>
-                );
-              })}
-              {goalObjs.length === 0 && (
-                <text x="180" y="130" fontSize="10" textAnchor="middle" fill="#fff" opacity="0.8">ยังไม่มีเป้าหมาย</text>
-              )}
-
-              {/* ---- OVERALL SCORE badge ---- */}
-              <g>
-                <circle cx="180" cy="170" r="22" fill="white" stroke={A.overall >= 70 ? T.good : A.overall >= 45 ? T.warn : T.bad} strokeWidth="3" />
-                <text x="180" y="176" fontSize="15" textAnchor="middle" fontWeight="800" fill={T.navy}>{A.overall}</text>
-              </g>
-
-              {/* Stage label */}
-              <rect x="125" y="5" width="110" height="22" rx="11" fill="rgba(255,255,255,0.85)" />
-              <text x="180" y="20" fontSize="11" textAnchor="middle" fontWeight="700" fill={T.navy}>
-                {treeStage === "flourishing" ? "🌳 สมบูรณ์!" : treeStage === "growing" ? "🌿 กำลังเติบโต" : "🌱 เริ่มปลูก"}
-              </text>
-            </svg>
-          </div>
-
-          {/* Tree legend */}
-          <div style={{ padding: "12px 16px", display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-            {[
-              { emoji: "🌿", label: "ราก", desc: "EF + Insurance + Spending", score: rootScore },
-              { emoji: "🪵", label: "ลำต้น", desc: "Investment + Tax", score: trunkScore },
-              { emoji: "🌸", label: "กิ่ง", desc: "Goals", score: A.goalsScore },
-            ].map((s) => (
-              <div key={s.label} style={{ textAlign: "center", minWidth: 80 }}>
-                <div style={{ fontSize: 10, color: T.sub }}>{s.emoji} {s.label}</div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: s.score >= 70 ? T.good : s.score >= 45 ? T.warn : T.bad }}>{s.score}</div>
-              </div>
-            ))}
+        {/* Financial Tree button (leads to its own page) */}
+        <Card onClick={onTree} style={{ cursor: "pointer", background: "linear-gradient(135deg, #E8F8EE, #F1FAF4)", border: `1px solid #B8E6C8` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ fontSize: 40 }}>🌳</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, color: T.navy, fontSize: 15 }}>{t("ต้นไม้การเงินของฉัน","My Financial Tree")}</div>
+              <div style={{ fontSize: 12, color: T.sub }}>{t("ดูภาพรวมสุขภาพการเงินแบบต้นไม้","See your financial health as a growing tree")}</div>
+            </div>
+            <span style={{ fontSize: 20, color: T.good }}>→</span>
           </div>
         </Card>
 
@@ -1776,12 +1891,10 @@ function Dashboard({ answers, go, onEdit, onRewards }) {
         <Card style={{ background: "linear-gradient(135deg, #FFF8E1, #FFF3CD)" }} onClick={onRewards}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
             <div>
-              <div style={{ fontWeight: 700, color: T.navy, fontSize: 13 }}>⭐ คะแนนสะสม</div>
+              <div style={{ fontWeight: 700, color: T.navy, fontSize: 13 }}>⭐ {t("คะแนนสะสม","Reward Points")}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: "#FFB800" }}>{fmt(points)} pts</div>
             </div>
-            <div style={{ background: "#FFB800", color: "#fff", padding: "8px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
-              แลกรางวัล →
-            </div>
+            <div style={{ background: "#FFB800", color: "#fff", padding: "8px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>{t("แลกรางวัล","Redeem")} →</div>
           </div>
         </Card>
       </div>
@@ -1792,7 +1905,10 @@ function Dashboard({ answers, go, onEdit, onRewards }) {
 // ===== MAIN APP =====
 function App() {
   const [page, setPage] = useState('feature');
+  const [lang, setLang] = useState('th');
+  LANG = lang; SET_LANG = setLang;
   const [stockBuyInfo, setStockBuyInfo] = useState({ ticker: null, price: null });
+  const [fundInfo, setFundInfo] = useState(null);
   const [answers, setAnswers] = useState({
     occupation: null, income: 0, incomeType: null, maritalStatus: null, dependents: 0, ssfRmfAmount: 0, lifeInsurancePremium: 0, charitableDonation: 0,
     savings: 0, efStatus: null, investStatus: null, investFreq: null, investTypes: [], stockSectorsTH: [], stockSectorsINT: [], bondTypes: [], industries: [], insurance: [],
@@ -1807,10 +1923,13 @@ function App() {
       {page === 'feature' && <FeaturePage onStart={() => setPage('onboarding')} />}
       {page === 'onboarding' && <Onboarding answers={answers} setAnswers={setAnswers} onDone={() => setPage('allocation')} />}
       {page === 'allocation' && <WealthAllocationPage answers={answers} onNext={() => setPage('dashboard')} onBack={() => setPage('onboarding')} />}
-      {page === 'dashboard' && <Dashboard answers={answers} go={setPage} onEdit={() => setPage('onboarding')} onRewards={() => setPage('rewards')} />}
+      {page === 'dashboard' && <Dashboard answers={answers} go={setPage} onEdit={() => setPage('onboarding')} onRewards={() => setPage('rewards')} onTree={() => setPage('tree')} />}
+      {page === 'tree' && <FinancialTreePage answers={answers} onBack={() => setPage('dashboard')} onRewards={() => setPage('rewards')} />}
       {page === 'rewards' && <RewardsPage answers={answers} onBack={() => setPage('dashboard')} />}
       {page === 'emergency' && <EmergencyFundPage answers={answers} onBack={() => setPage('dashboard')} />}
-      {page === 'tax' && <TaxPlanningPage answers={answers} onBack={() => setPage('dashboard')} />}
+      {page === 'tax' && <TaxPlanningPage answers={answers} onBack={() => setPage('dashboard')} onBuyFund={(f) => { setFundInfo(f); setPage('ktxbuy'); }} onEducation={() => setPage('taxedu')} />}
+      {page === 'ktxbuy' && <KTXBuyPage fund={fundInfo} answers={answers} onBack={() => setPage('tax')} />}
+      {page === 'taxedu' && <TaxEducationPage onBack={() => setPage('tax')} />}
       {page === 'spending' && <DailySpendingPage answers={answers} onBack={() => setPage('dashboard')} />}
       {page === 'goals' && <SavingGoalsPage answers={answers} onBack={() => setPage('dashboard')} />}
       {page === 'invest' && <InvestmentPage answers={answers} onBack={() => setPage('dashboard')} onBuyStock={(ticker, price) => { setStockBuyInfo({ticker, price}); setPage('stockinfo'); }} />}
